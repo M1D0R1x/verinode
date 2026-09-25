@@ -63,8 +63,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+index-service/lib/
+index-service/lib64/
+!apps/web/lib/
 parts/
 sdist/
 var/

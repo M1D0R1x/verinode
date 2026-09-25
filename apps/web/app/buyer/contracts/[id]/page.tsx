@@ -18,10 +18,12 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { StateTimeline } from "@/components/ui/state-timeline";
 import { ContractState } from "@/lib/types";
 import { formatCents } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export default function ContractDetailPage({ params }: { params: { id: string } }) {
   const [contractState, setContractState] = useState<ContractState>("live");
   const [isDisputing, setIsDisputing] = useState(false);
+  const [transitionNotice, setTransitionNotice] = useState<string | null>(null);
 
   const tradeId = params.id;
   const gradeName = "8x NVIDIA H100 SXM 80GB (168-Hour Block)";
@@ -29,10 +31,27 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
   const totalCents = 3696000; // $36,960.00
   const pdfHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-  const handleOpenClaim = () => {
+  const handleOpenClaim = async () => {
     if (confirm("Open an SLA performance claim with cryptographic telemetry evidence bundle?")) {
-      setContractState("claim_open");
-      setIsDisputing(true);
+      try {
+        const res = await api.validateTransition({
+          current_state: contractState,
+          next_state: "claim_open",
+          actor: "usr_buyer_institutional",
+          reason: "NCCL bandwidth dip below 400 GB/s benchmark floor",
+          idempotency_key: `claim_${Date.now()}`,
+        });
+        if (res.valid) {
+          setContractState("claim_open");
+          setIsDisputing(true);
+          setTransitionNotice("Transition verified and logged by Go State Machine (RFC 7807 compliant).");
+        }
+      } catch (err: unknown) {
+        // Fallback update if gateway offline
+        setContractState("claim_open");
+        setIsDisputing(true);
+        setTransitionNotice("Claim opened locally (API gateway offline).");
+      }
     }
   };
 
@@ -87,6 +106,13 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
           </span>
           <StateTimeline currentState={contractState} />
         </div>
+
+        {transitionNotice && (
+          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs font-mono flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span>{transitionNotice}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

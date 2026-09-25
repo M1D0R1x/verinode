@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Server, ShieldCheck, CheckCircle2, Send } from "lucide-react";
 import { formatCents } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { DeliveryGrade } from "@/lib/types";
 
 export default function NewRFQPage() {
   const router = useRouter();
 
+  const [grades, setGrades] = useState<DeliveryGrade[]>([]);
   const [gradeId, setGradeId] = useState("H100-SXM-8XNV");
   const [region, setRegion] = useState("US-East");
   const [tenorHours, setTenorHours] = useState(168);
@@ -16,6 +19,37 @@ export default function NewRFQPage() {
   const [targetHourlyCents, setTargetHourlyCents] = useState(21000); // $210.00 / hr node
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    api
+      .getGrades()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setGrades(data);
+          setGradeId(data[0].id);
+        }
+      })
+      .catch(() => {
+        // Fallback to static benchmark grade if backend is offline
+        setGrades([
+          {
+            id: "H100-SXM-8XNV",
+            gpu_sku: "NVIDIA H100 SXM 80GB",
+            min_memory_gb: 640,
+            topology: "SXM5/HGX NVLink 4.0 / NVSwitch",
+            min_healthy_gpu_count: 8,
+            benchmark_floor: {
+              nccl_allreduce_gb_per_sec: 400,
+              min_cuda_driver: "535.129.03",
+              max_ecc_unrecovered_errors: 0,
+            },
+            min_cpu_cores: 112,
+            min_ram_gb: 1024,
+            min_nvme_perf: 100000,
+          },
+        ]);
+      });
+  }, []);
 
   const totalEstimateCents = targetHourlyCents * tenorHours;
 
