@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +32,13 @@ func DefaultConfig() Config {
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		connStr = os.Getenv("POSTGRES_URL")
+	}
+
+	if connStr != "" {
+		connStr = strings.ReplaceAll(connStr, "channel_binding=require&", "")
+		connStr = strings.ReplaceAll(connStr, "&channel_binding=require", "")
+		connStr = strings.ReplaceAll(connStr, "?channel_binding=require", "?")
+		connStr = strings.ReplaceAll(connStr, "-pooler.", ".")
 	}
 
 	return Config{
