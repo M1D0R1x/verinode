@@ -21,8 +21,8 @@ func main() {
 	fmt.Println("\n================================================================================")
 	fmt.Println("       VERINODE PHASE 4: SOLANA DEVNET SETTLEMENT MIRROR PIPELINE              ")
 	fmt.Println("================================================================================")
-	fmt.Println("Invariant 6: Off-chain PostgreSQL remains the authoritative source of truth.")
-	fmt.Println("Solana Anchor PDA mirrors state & canary cryptographic attestations for audit.\n")
+	fmt.Println("Solana Anchor PDA mirrors state & canary cryptographic attestations for audit.")
+	fmt.Println()
 
 	// 1. Connect to DB to load live trade
 	cfg := db.DefaultConfig()

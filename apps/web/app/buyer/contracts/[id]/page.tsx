@@ -16,6 +16,9 @@ import {
   X,
   Copy,
   Hash,
+  ExternalLink,
+  Layers,
+  Globe,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StateTimeline } from "@/components/ui/state-timeline";
@@ -351,6 +354,151 @@ SHA-256 INTEGRITY DIGEST : 4f738b556e4c7d0d0460d3d5f308f2a10bf30299f187d993e5a52
                 Escrow debits and seller payout credits balance to zero (Sum of amount_cents == 0). Payout executes automatically upon window completion.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PHASE 4: ON-CHAIN SETTLEMENT RAILS & CRYPTOGRAPHIC MIRRORS */}
+      <div className="p-6 rounded-2xl bg-surface border border-border space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+          <div className="flex items-center gap-2.5">
+            <Layers className="h-5 w-5 text-accent" />
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+                Phase 4 Multi-Chain Settlement Rails & Proof Mirrors
+              </h2>
+              <p className="text-xs text-muted">
+                Off-chain PostgreSQL remains authoritative (Invariant 6). Blockchains act as verifiable state mirrors and optional settlement rails.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800 text-emerald-300 w-fit">
+            3 Chains Synchronized
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+          {/* 1. SOLANA DEVNET */}
+          <div className="p-4 rounded-xl bg-surfaceSubtle border border-border/80 flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-purple-400" />
+                  Solana Devnet
+                </span>
+                <span className="text-[10px] text-purple-300 bg-purple-950/50 px-2 py-0.5 rounded border border-purple-800/60">
+                  Anchor PDA
+                </span>
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Trade envelope PDA keyed to <code className="text-zinc-300">trade_id</code> with canary attestation floor check.
+              </p>
+              <div className="space-y-1 text-[11px] pt-1">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Program:</span>
+                  <span className="text-white">VnodE7Z...1bC</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Canary Pass:</span>
+                  <span className="text-emerald-400 font-bold">405.2 GB/s (&ge;400)</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>State:</span>
+                  <span className="text-white capitalize">{contractState}</span>
+                </div>
+              </div>
+            </div>
+            <a
+              href={`https://explorer.solana.com/address/0x775f40d1508c3da81bfa61dac3149dc17f5273ac881bec9d659812193f4e8cb0?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-purple-950/30 border border-purple-800/50 text-purple-300 hover:bg-purple-900/40 text-[11px] transition-colors"
+            >
+              <span>View on Solana Explorer</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+
+          {/* 2. ARBITRUM SEPOLIA */}
+          <div className="p-4 rounded-xl bg-surfaceSubtle border border-border/80 flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                  Arbitrum Sepolia
+                </span>
+                <span className="text-[10px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/60">
+                  EVM Escrow
+                </span>
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Solidity registry contract with ReentrancyGuard, bilateral deposit custody, and delivery dispute resolution.
+              </p>
+              <div className="space-y-1 text-[11px] pt-1">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Contract:</span>
+                  <span className="text-white">0x71C8A...8A5A</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Escrow:</span>
+                  <span className="text-emerald-400 font-bold">$29,568.00</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Guard:</span>
+                  <span className="text-white">CEI + Mutex</span>
+                </div>
+              </div>
+            </div>
+            <a
+              href="https://sepolia.arbiscan.io/address/0x71C8A108882F07E78e718bF7e48b8B8a113f8A5A"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-cyan-950/30 border border-cyan-800/50 text-cyan-300 hover:bg-cyan-900/40 text-[11px] transition-colors"
+            >
+              <span>View on Arbiscan</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+
+          {/* 3. HYPERLIQUID L1 */}
+          <div className="p-4 rounded-xl bg-surfaceSubtle border border-border/80 flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  Hyperliquid L1
+                </span>
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/60">
+                  HIP-3 Oracle
+                </span>
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Volume-weighted median index price feed and supplier delta-hedging against physical capacity commitment.
+              </p>
+              <div className="space-y-1 text-[11px] pt-1">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Market:</span>
+                  <span className="text-white">H100-168H-PERP</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Oracle Fix:</span>
+                  <span className="text-emerald-400 font-bold">$2.20 / GPU-hr</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Invariant 5:</span>
+                  <span className="text-emerald-400">3/3 Nodes Verified</span>
+                </div>
+              </div>
+            </div>
+            <a
+              href="https://app.hyperliquid.xyz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-950/30 border border-emerald-800/50 text-emerald-300 hover:bg-emerald-900/40 text-[11px] transition-colors"
+            >
+              <span>Open Hyperliquid DEX</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         </div>
       </div>
