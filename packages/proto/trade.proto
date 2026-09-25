@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package verinode.v1;
+
+option go_package = "github.com/verinode/verinode/services/pkg/proto/v1;verinodev1";
+
+enum ContractState {
+  CONTRACT_STATE_UNSPECIFIED = 0;
+  CONTRACT_STATE_DRAFT_RFQ = 1;
+  CONTRACT_STATE_OPEN = 2;
+  CONTRACT_STATE_QUOTED = 3;
+  CONTRACT_STATE_ACCEPTED = 4;
+  CONTRACT_STATE_CONTRACT_PENDING = 5;
+  CONTRACT_STATE_FUNDED_SECURED = 6;
+  CONTRACT_STATE_SCHEDULED = 7;
+  CONTRACT_STATE_DELIVERY_TEST = 8;
+  CONTRACT_STATE_LIVE = 9;
+  CONTRACT_STATE_COMPLETED = 10;
+  CONTRACT_STATE_SETTLED = 11;
+  CONTRACT_STATE_CANCELLED = 12;
+  CONTRACT_STATE_FAILED_DELIVERY = 13;
+  CONTRACT_STATE_CURE = 14;
+  CONTRACT_STATE_SUBSTITUTED = 15;
+  CONTRACT_STATE_CLAIM_OPEN = 16;
+  CONTRACT_STATE_DISPUTED = 17;
+  CONTRACT_STATE_TERMINATED = 18;
+}
+
+message CanonicalTradeEnvelope {
+  string trade_id = 1;
+  string rfq_id = 2;
+  string quote_id = 3;
+  string buyer_id = 4;
+  string seller_id = 5;
+  string grade_id = 6;
+  ContractState state = 7;
+  int64 price_cents = 8;
+  string currency = 9;
+  string signed_pdf_hash = 10;
+  int64 created_at_unix_ms = 11;
+}
