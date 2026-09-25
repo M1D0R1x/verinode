@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/M1D0R1x/verinode/services/internal/telemetry"
@@ -22,6 +26,7 @@ func main() {
 	memoryGB := flag.Int("mem", 640, "Total GPU memory in GB")
 	topology := flag.String("topology", "SXM5/HGX 8x NVLink 4.0 / NVSwitch", "GPU interconnect topology")
 	verifyOnly := flag.Bool("verify", false, "Verify an incoming report from stdin")
+	sendTo := flag.String("send-to", "", "Verinode API Gateway URL to POST signed attestation (e.g. http://localhost:8080)")
 	flag.Parse()
 
 	if *verifyOnly {
@@ -83,6 +88,24 @@ func main() {
 		"report":     report,
 		"signature":  base64.StdEncoding.EncodeToString(signature),
 		"public_key": base64.StdEncoding.EncodeToString(pubKey),
+	}
+
+	if *sendTo != "" {
+		endpoint := strings.TrimRight(*sendTo, "/") + "/v1/telemetry/attestations/verify"
+		jsonBytes, _ := json.Marshal(output)
+
+		resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(jsonBytes))
+		if err != nil {
+			log.Fatalf("failed to dispatch attestation to %s: %v", endpoint, err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode >= 400 {
+			log.Fatalf("GATEWAY REJECTED ATTESTATION [%d]: %s", resp.StatusCode, string(bodyBytes))
+		}
+		fmt.Printf("✓ Attestation successfully verified and ingested by Gateway [%d]\nResponse: %s\n", resp.StatusCode, string(bodyBytes))
+		return
 	}
 
 	enc := json.NewEncoder(os.Stdout)

@@ -99,3 +99,36 @@ export interface TelemetryHealth {
   allreduce_gbps: number;
   status: "healthy" | "degraded" | "failing";
 }
+
+export interface Claim {
+  id: string;
+  contract_id: string;
+  opened_by: string;
+  type: "outage" | "degradation" | "non_delivery" | "nonpayment";
+  state: "claim_open" | "resolved" | "disputed";
+  created_at: string;
+  resolved_at?: string;
+}
+
+export interface ConfirmationDocument {
+  trade_id: string;
+  contract_date: string;
+  buyer: {
+    id: string;
+    legal_name: string;
+    jurisdiction: string;
+    role: string;
+  };
+  seller: {
+    id: string;
+    legal_name: string;
+    jurisdiction: string;
+    role: string;
+  };
+  grade_id: string;
+  template_version: string;
+  duration_hours: number;
+  state: string;
+  sha256_checksum: string;
+  document_content: string;
+}

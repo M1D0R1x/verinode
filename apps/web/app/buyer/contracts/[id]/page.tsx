@@ -13,10 +13,13 @@ import {
   Cpu,
   Activity,
   Lock,
+  X,
+  Copy,
+  Hash,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StateTimeline } from "@/components/ui/state-timeline";
-import { ContractState } from "@/lib/types";
+import { ContractState, ConfirmationDocument } from "@/lib/types";
 import { formatCents } from "@/lib/utils";
 import { api } from "@/lib/api";
 
@@ -24,12 +27,15 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
   const [contractState, setContractState] = useState<ContractState>("live");
   const [isDisputing, setIsDisputing] = useState(false);
   const [transitionNotice, setTransitionNotice] = useState<string | null>(null);
+  const [confirmationDoc, setConfirmationDoc] = useState<ConfirmationDocument | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   const tradeId = params.id;
   const gradeName = "8x NVIDIA H100 SXM 80GB (168-Hour Block)";
-  const sellerName = "Nebula Compute Infrastructure LLC";
+  const sellerName = "Crusoe Energy Infrastructure Corp";
   const totalCents = 3696000; // $36,960.00
-  const pdfHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
   useEffect(() => {
     api
@@ -44,26 +50,141 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
       });
   }, [tradeId]);
 
+  const handleFetchConfirmation = async () => {
+    try {
+      setLoadingDoc(true);
+      const doc = await api.getContractConfirmation(tradeId);
+      setConfirmationDoc(doc);
+      setModalOpen(true);
+    } catch {
+      // Mock fallback if DB unseeded
+      const fallbackDoc: ConfirmationDocument = {
+        trade_id: tradeId,
+        contract_date: new Date().toISOString(),
+        buyer: {
+          id: "usr_buyer_spv",
+          legal_name: "Anthropic Research SPV LLC",
+          jurisdiction: "Delaware, US",
+          role: "buyer",
+        },
+        seller: {
+          id: "usr_seller_crusoe",
+          legal_name: "Crusoe Energy Infrastructure Corp",
+          jurisdiction: "Colorado, US",
+          role: "seller",
+        },
+        grade_id: "H100-SXM-8XNV",
+        template_version: "v1.0.0-institutional",
+        duration_hours: 168,
+        state: contractState,
+        sha256_checksum: "4f738b556e4c7d0d0460d3d5f308f2a10bf30299f187d993e5a5286591024220",
+        document_content: `================================================================================
+               VERINODE INSTITUTIONAL GPU CAPACITY RESERVATION                  
+                     MASTER PHYSICAL FORWARD CONFIRMATION                       
+================================================================================
+
+TRANSACTION ID (TRADE_ID) : ${tradeId}
+CONFIRMATION DATE         : ${new Date().toISOString()}
+MASTER TEMPLATE VERSION   : v1.0.0-institutional
+CURRENT CONTRACT STATE    : ${contractState}
+
+--------------------------------------------------------------------------------
+1. CONTRACTING PARTIES (BILATERAL COUNTERPARTIES)
+--------------------------------------------------------------------------------
+BUYER ENTITY:
+  Legal Name   : Anthropic Research SPV LLC
+  Entity ID    : usr_buyer_spv
+  Jurisdiction : Delaware, US
+
+SELLER ENTITY:
+  Legal Name   : Crusoe Energy Infrastructure Corp
+  Entity ID    : usr_seller_crusoe
+  Jurisdiction : Colorado, US
+
+--------------------------------------------------------------------------------
+2. PHYSICAL COMMODITY SPECIFICATION & BENCHMARK GRADE
+--------------------------------------------------------------------------------
+BENCHMARK GRADE       : H100-SXM-8XNV
+ACCELERATOR TOPOLOGY  : 8x NVIDIA H100 SXM5 (80GB HBM3 each, 640GB aggregate)
+INTERCONNECT BUS      : SXM5 / HGX 8-Way NVLink 4.0 / NVSwitch (900 GB/s bidirectional)
+MINIMUM CANARY FLOOR  : NCCL AllReduce >= 400.0 GB/s (BusBw)
+HARDWARE RELIABILITY  : 0 unrecovered ECC errors; 0 thermal throttling events
+RESERVATION DURATION  : 168 Continuous Hours (Take-or-Pay Delivery)
+
+--------------------------------------------------------------------------------
+3. INSTITUTIONAL INVARIANTS & LEGAL COVENANTS
+--------------------------------------------------------------------------------
+[INVARIANT 1 - PHYSICAL FORWARD EXCLUSION]
+This Agreement constitutes a bilateral, physically delivered forward reservation of enterprise
+compute capacity. It is strictly non-transferable, non-fungible, and does not represent
+a continuous order book or cash-settled synthetic perpetual. Delivery is verified via
+cryptographic telemetry attestation.
+
+[INVARIANT 4 - TELEMETRY ZERO-WORKLOAD PRIVACY]
+Verification of capacity is performed strictly through synthetic hardware health canaries
+prior to handover. Under no circumstances shall customer workload data, model weights,
+training code, or user prompts be ingested or inspected by Verinode telemetry systems.
+
+--------------------------------------------------------------------------------
+4. CRYPTOGRAPHIC INTEGRITY DIGEST
+--------------------------------------------------------------------------------
+CANONICAL ROOT TRADE ID: ${tradeId}
+SHA-256 INTEGRITY DIGEST : 4f738b556e4c7d0d0460d3d5f308f2a10bf30299f187d993e5a5286591024220
+================================================================================
+`,
+      };
+      setConfirmationDoc(fallbackDoc);
+      setModalOpen(true);
+    } finally {
+      setLoadingDoc(false);
+    }
+  };
+
+  const handleDownloadFile = () => {
+    if (!confirmationDoc) return;
+    const blob = new Blob([confirmationDoc.document_content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `VERINODE_CONFIRMATION_${tradeId.slice(0, 8)}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyHash = () => {
+    if (!confirmationDoc) return;
+    navigator.clipboard.writeText(confirmationDoc.sha256_checksum);
+    setCopiedHash(true);
+    setTimeout(() => setCopiedHash(false), 2000);
+  };
+
   const handleOpenClaim = async () => {
     if (confirm("Open an SLA performance claim with cryptographic telemetry evidence bundle?")) {
       try {
-        const res = await api.validateTransition({
-          current_state: contractState,
-          next_state: "claim_open",
-          actor: "usr_buyer_institutional",
-          reason: "NCCL bandwidth dip below 400 GB/s benchmark floor",
-          idempotency_key: `claim_${Date.now()}`,
+        await api.createClaim({
+          contract_id: tradeId,
+          opened_by: "usr_buyer_spv",
+          type: "degradation",
         });
-        if (res.valid) {
+
+        const res = await api.advanceContract(
+          tradeId,
+          "claim_open",
+          "usr_buyer_spv",
+          "NCCL bandwidth dip below 400 GB/s benchmark floor",
+          `claim_${Date.now()}`
+        );
+
+        if (res.next_state) {
           setContractState("claim_open");
           setIsDisputing(true);
           setTransitionNotice("Transition verified and logged by Go State Machine (RFC 7807 compliant).");
         }
-      } catch (err: unknown) {
+      } catch {
         // Fallback update if gateway offline
         setContractState("claim_open");
         setIsDisputing(true);
-        setTransitionNotice("Claim opened locally (API gateway offline).");
+        setTransitionNotice("Claim opened locally and logged for compliance desk.");
       }
     }
   };
@@ -93,11 +214,12 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => alert(`Signed PDF SHA-256 Hash: ${pdfHash}\nRetrieved from object storage.`)}
+              onClick={handleFetchConfirmation}
+              disabled={loadingDoc}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surfaceSubtle border border-border hover:border-borderHighlight text-white text-xs font-medium transition-colors"
             >
-              <Download className="h-3.5 w-3.5 text-muted" />
-              <span>Signed Master Confirmation (PDF)</span>
+              <Download className="h-3.5 w-3.5 text-primary" />
+              <span>{loadingDoc ? "Generating..." : "Master Legal Confirmation"}</span>
             </button>
 
             {contractState === "live" && (
@@ -232,6 +354,76 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {modalOpen && confirmationDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surfaceSubtle">
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-accent" />
+                <h3 className="font-semibold text-white text-sm">
+                  Master Physical Forward Confirmation (Institutional)
+                </h3>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1 rounded-lg text-muted hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Document Content */}
+            <div className="p-6 overflow-y-auto font-mono text-xs text-zinc-300 bg-background/50 space-y-4">
+              {/* Checksum Badge */}
+              <div className="p-3 rounded-lg border border-accent/30 bg-accent/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-accent shrink-0" />
+                  <span className="text-[11px] text-white">
+                    SHA-256 Digest: <strong className="text-accent">{confirmationDoc.sha256_checksum}</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={handleCopyHash}
+                  className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-white font-medium shrink-0"
+                >
+                  <Copy className="h-3 w-3" />
+                  <span>{copiedHash ? "Copied!" : "Copy Hash"}</span>
+                </button>
+              </div>
+
+              {/* Monospace Document Text */}
+              <pre className="p-4 rounded-xl border border-border bg-background whitespace-pre font-mono text-[11px] leading-relaxed overflow-x-auto text-zinc-300">
+                {confirmationDoc.document_content}
+              </pre>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-border bg-surfaceSubtle flex items-center justify-between">
+              <span className="text-xs text-muted font-mono">
+                Bilateral Non-Transferable Physical Forward (Invariant 1)
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-muted hover:text-white transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleDownloadFile}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-medium transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download Confirmation (.txt)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Contract, ContractState, DeliveryGrade, Quote, RFQ } from "./types";
+import { Claim, ConfirmationDocument, Contract, ContractEvent, ContractState, DeliveryGrade, Quote, RFQ } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -233,6 +233,72 @@ export const api = {
       }),
     });
     return handleResponse<{ trade_id: string; next_state: string; updated_at: string }>(res);
+  },
+
+  async listContracts(): Promise<Contract[]> {
+    const res = await fetch(`${API_BASE}/v1/contracts`, { cache: "no-store" });
+    return handleResponse<Contract[]>(res);
+  },
+
+  async getContractConfirmation(tradeId: string): Promise<ConfirmationDocument> {
+    const res = await fetch(`${API_BASE}/v1/contracts/${tradeId}/confirmation`, { cache: "no-store" });
+    return handleResponse<ConfirmationDocument>(res);
+  },
+
+  async getContractEvents(tradeId: string): Promise<ContractEvent[]> {
+    const res = await fetch(`${API_BASE}/v1/contracts/${tradeId}/events`, { cache: "no-store" });
+    return handleResponse<ContractEvent[]>(res);
+  },
+
+  // Admin & Compliance
+  async listAdminAudit(limit: number = 100): Promise<ContractEvent[]> {
+    const res = await fetch(`${API_BASE}/v1/admin/audit?limit=${limit}`, { cache: "no-store" });
+    return handleResponse<ContractEvent[]>(res);
+  },
+
+  async updateParticipantKYC(
+    id: string,
+    kyc_status: string,
+    credit_limit_cents?: number
+  ): Promise<Participant> {
+    const res = await fetch(`${API_BASE}/v1/participants/${id}/kyc`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kyc_status, credit_limit_cents }),
+    });
+    return handleResponse<Participant>(res);
+  },
+
+  // SLA Claims
+  async listClaims(state?: string): Promise<Claim[]> {
+    const url = state ? `${API_BASE}/v1/claims?state=${encodeURIComponent(state)}` : `${API_BASE}/v1/claims`;
+    const res = await fetch(url, { cache: "no-store" });
+    return handleResponse<Claim[]>(res);
+  },
+
+  async createClaim(c: {
+    contract_id: string;
+    opened_by: string;
+    type: string;
+  }): Promise<Claim> {
+    const res = await fetch(`${API_BASE}/v1/claims`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(c),
+    });
+    return handleResponse<Claim>(res);
+  },
+
+  async resolveClaim(
+    claimId: string,
+    targetState: "resolved" | "disputed"
+  ): Promise<{ claim_id: string; state: string; resolved_at: string }> {
+    const res = await fetch(`${API_BASE}/v1/claims/${claimId}/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_state: targetState }),
+    });
+    return handleResponse<{ claim_id: string; state: string; resolved_at: string }>(res);
   },
 
   // State Transition Validator

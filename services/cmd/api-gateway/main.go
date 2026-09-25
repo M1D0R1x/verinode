@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/M1D0R1x/verinode/services/internal/claims"
 	"github.com/M1D0R1x/verinode/services/internal/contract"
 	"github.com/M1D0R1x/verinode/services/internal/db"
 	"github.com/M1D0R1x/verinode/services/internal/inventory"
@@ -59,11 +60,12 @@ func main() {
 	}
 
 	var (
-		pRepo *participant.Repository
-		iRepo *inventory.Repository
-		rRepo *rfq.Repository
-		cRepo *contract.Repository
-		lRepo *ledger.Repository
+		pRepo     *participant.Repository
+		iRepo     *inventory.Repository
+		rRepo     *rfq.Repository
+		cRepo     *contract.Repository
+		lRepo     *ledger.Repository
+		claimRepo *claims.Repository
 	)
 
 	dbCfg := db.DefaultConfig()
@@ -81,13 +83,14 @@ func main() {
 			rRepo = rfq.NewRepository(pool.Pool)
 			cRepo = contract.NewRepository(pool.Pool)
 			lRepo = ledger.NewRepository(pool.Pool)
+			claimRepo = claims.NewRepository(pool.Pool)
 			logger.Info("All database domain repositories connected successfully")
 		}
 	} else {
 		logger.Warn("DATABASE_URL not configured; running in standalone mode")
 	}
 
-	srv := NewServer(pRepo, iRepo, rRepo, cRepo, lRepo, logger)
+	srv := NewServer(pRepo, iRepo, rRepo, cRepo, lRepo, claimRepo, logger)
 
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),

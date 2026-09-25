@@ -130,3 +130,21 @@ func (r *Repository) List(ctx context.Context) ([]Participant, error) {
 
 	return result, nil
 }
+
+func (r *Repository) UpdateKYC(ctx context.Context, id string, status string, creditLimitCents *int64) error {
+	query := `
+		UPDATE participants
+		SET kyc_status = $1,
+		    credit_limit_cents = COALESCE($2, credit_limit_cents),
+		    updated_at = NOW()
+		WHERE id = $3;
+	`
+	cmdTag, err := r.pool.Exec(ctx, query, status, creditLimitCents, id)
+	if err != nil {
+		return fmt.Errorf("updating participant KYC %s: %w", id, err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return ErrParticipantNotFound
+	}
+	return nil
+}

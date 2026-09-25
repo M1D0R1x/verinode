@@ -12,6 +12,7 @@ export function Header() {
     { name: "Grades & Specs", href: "/#grades" },
     { name: "Buyer Portal", href: "/buyer" },
     { name: "Seller Portal", href: "/seller" },
+    { name: "Admin Console", href: "/admin" },
     { name: "Index & Data", href: "/#index" },
   ];
 

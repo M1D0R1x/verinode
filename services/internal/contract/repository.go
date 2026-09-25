@@ -196,3 +196,155 @@ func (r *Repository) AdvanceContractState(ctx context.Context, tradeID string, n
 
 	return nil
 }
+
+type ContractEventRecord struct {
+	ID                    string                 `json:"id"`
+	ContractID            string                 `json:"contract_id"`
+	PriorState            string                 `json:"prior_state"`
+	NewState              string                 `json:"new_state"`
+	Actor                 string                 `json:"actor"`
+	Reason                string                 `json:"reason"`
+	IdempotencyKey        string                 `json:"idempotency_key"`
+	EvidenceHash          *string                `json:"evidence_hash,omitempty"`
+	AuthorizationDecision map[string]interface{} `json:"authorization_decision,omitempty"`
+	CreatedAt             time.Time              `json:"created_at"`
+}
+
+func (r *Repository) ListContracts(ctx context.Context) ([]ContractRecord, error) {
+	query := `
+		SELECT id, rfq_id, quote_id, buyer_id, seller_id, grade_id, template_version, state, signed_pdf_hash, signed_pdf_ref, created_at, updated_at
+		FROM contracts
+		ORDER BY created_at DESC;
+	`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("listing contracts: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ContractRecord
+	for rows.Next() {
+		var c ContractRecord
+		var st string
+		if err := rows.Scan(
+			&c.ID,
+			&c.RFQID,
+			&c.QuoteID,
+			&c.BuyerID,
+			&c.SellerID,
+			&c.GradeID,
+			&c.TemplateVersion,
+			&st,
+			&c.SignedPDFHash,
+			&c.SignedPDFRef,
+			&c.CreatedAt,
+			&c.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning contract: %w", err)
+		}
+		state, err := ParseState(st)
+		if err == nil {
+			c.State = state
+		}
+		result = append(result, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating contracts: %w", err)
+	}
+	return result, nil
+}
+
+func (r *Repository) GetContractEvents(ctx context.Context, tradeID string) ([]ContractEventRecord, error) {
+	query := `
+		SELECT id, contract_id, prior_state, new_state, actor, reason, idempotency_key, evidence_hash, authorization_decision, created_at
+		FROM contract_events
+		WHERE contract_id = $1
+		ORDER BY created_at ASC;
+	`
+	rows, err := r.pool.Query(ctx, query, tradeID)
+	if err != nil {
+		return nil, fmt.Errorf("getting contract events %s: %w", tradeID, err)
+	}
+	defer rows.Close()
+
+	var events []ContractEventRecord
+	for rows.Next() {
+		var e ContractEventRecord
+		var authBytes []byte
+		if err := rows.Scan(
+			&e.ID,
+			&e.ContractID,
+			&e.PriorState,
+			&e.NewState,
+			&e.Actor,
+			&e.Reason,
+			&e.IdempotencyKey,
+			&e.EvidenceHash,
+			&authBytes,
+			&e.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning contract event: %w", err)
+		}
+		if len(authBytes) > 0 {
+			_ = json.Unmarshal(authBytes, &e.AuthorizationDecision)
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
+func (r *Repository) ListAllEvents(ctx context.Context, limit int) ([]ContractEventRecord, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	query := `
+		SELECT id, contract_id, prior_state, new_state, actor, reason, idempotency_key, evidence_hash, authorization_decision, created_at
+		FROM contract_events
+		ORDER BY created_at DESC
+		LIMIT $1;
+	`
+	rows, err := r.pool.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("listing all contract events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []ContractEventRecord
+	for rows.Next() {
+		var e ContractEventRecord
+		var authBytes []byte
+		if err := rows.Scan(
+			&e.ID,
+			&e.ContractID,
+			&e.PriorState,
+			&e.NewState,
+			&e.Actor,
+			&e.Reason,
+			&e.IdempotencyKey,
+			&e.EvidenceHash,
+			&authBytes,
+			&e.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning contract event: %w", err)
+		}
+		if len(authBytes) > 0 {
+			_ = json.Unmarshal(authBytes, &e.AuthorizationDecision)
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
+func (r *Repository) UpdateSignedPDFHash(ctx context.Context, tradeID string, hash string, ref string) error {
+	query := `
+		UPDATE contracts
+		SET signed_pdf_hash = $1, signed_pdf_ref = $2, updated_at = NOW()
+		WHERE id = $3;
+	`
+	_, err := r.pool.Exec(ctx, query, hash, ref, tradeID)
+	if err != nil {
+		return fmt.Errorf("updating signed pdf hash: %w", err)
+	}
+	return nil
+}

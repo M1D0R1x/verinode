@@ -7,9 +7,11 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/M1D0R1x/verinode/services/internal/claims"
 	"github.com/M1D0R1x/verinode/services/internal/contract"
 	"github.com/M1D0R1x/verinode/services/internal/inventory"
 	"github.com/M1D0R1x/verinode/services/internal/ledger"
@@ -24,6 +26,7 @@ type Server struct {
 	rfqRepo         *rfq.Repository
 	contractRepo    *contract.Repository
 	ledgerRepo      *ledger.Repository
+	claimsRepo      *claims.Repository
 	logger          *slog.Logger
 	handler         http.Handler
 }
@@ -34,6 +37,7 @@ func NewServer(
 	rRepo *rfq.Repository,
 	cRepo *contract.Repository,
 	lRepo *ledger.Repository,
+	claimRepo *claims.Repository,
 	logger *slog.Logger,
 ) *Server {
 	if logger == nil {
@@ -46,6 +50,7 @@ func NewServer(
 		rfqRepo:         rRepo,
 		contractRepo:    cRepo,
 		ledgerRepo:      lRepo,
+		claimsRepo:      claimRepo,
 		logger:          logger,
 	}
 
@@ -69,6 +74,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/participants", s.handleCreateParticipant)
 	mux.HandleFunc("GET /v1/participants", s.handleListParticipants)
 	mux.HandleFunc("GET /v1/participants/{id}", s.handleGetParticipant)
+	mux.HandleFunc("PATCH /v1/participants/{id}/kyc", s.handleUpdateParticipantKYC)
+	mux.HandleFunc("POST /v1/participants/{id}/kyc", s.handleUpdateParticipantKYC)
 
 	// Inventory Endpoints
 	mux.HandleFunc("POST /v1/inventory/blocks", s.handleCreateInventoryBlock)
@@ -83,12 +90,21 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/rfqs/{id}/quotes/{quoteId}/accept", s.handleAcceptQuote)
 
 	// Contract Endpoints
+	mux.HandleFunc("GET /v1/contracts", s.handleListContracts)
 	mux.HandleFunc("GET /v1/contracts/{id}", s.handleGetContract)
+	mux.HandleFunc("GET /v1/contracts/{id}/confirmation", s.handleGetContractConfirmation)
+	mux.HandleFunc("GET /v1/contracts/{id}/events", s.handleGetContractEvents)
 	mux.HandleFunc("POST /v1/contracts/{id}/advance", s.handleAdvanceContract)
 	mux.HandleFunc("POST /v1/contracts/validate-transition", s.handleValidateTransition)
 
-	// Telemetry Verification
+	// Admin Audit & Telemetry
+	mux.HandleFunc("GET /v1/admin/audit", s.handleListAdminAudit)
 	mux.HandleFunc("POST /v1/telemetry/attestations/verify", s.handleVerifyTelemetry)
+
+	// Claims & SLA disputes
+	mux.HandleFunc("GET /v1/claims", s.handleListClaims)
+	mux.HandleFunc("POST /v1/claims", s.handleCreateClaim)
+	mux.HandleFunc("POST /v1/claims/{id}/resolve", s.handleResolveClaim)
 }
 
 // -----------------------------------------------------------------------------
@@ -548,5 +564,233 @@ func (s *Server) handleVerifyTelemetry(w http.ResponseWriter, r *http.Request) {
 		"block_id":        req.Report.BlockID,
 		"grade_compliant": true,
 		"timestamp":       time.Now().UTC(),
+	})
+}
+
+func (s *Server) handleUpdateParticipantKYC(w http.ResponseWriter, r *http.Request) {
+	if s.participantRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Participant repository not configured")
+		return
+	}
+
+	id := r.PathValue("id")
+	var req struct {
+		KYCStatus        string `json:"kyc_status"`
+		CreditLimitCents *int64 `json:"credit_limit_cents,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+
+	if req.KYCStatus == "" {
+		writeProblem(w, http.StatusBadRequest, "Missing Status", "kyc_status is required ('approved', 'rejected', 'review')")
+		return
+	}
+
+	if err := s.participantRepo.UpdateKYC(r.Context(), id, req.KYCStatus, req.CreditLimitCents); err != nil {
+		if errors.Is(err, participant.ErrParticipantNotFound) {
+			writeProblem(w, http.StatusNotFound, "Participant Not Found", id)
+			return
+		}
+		writeProblem(w, http.StatusInternalServerError, "Update Failed", err.Error())
+		return
+	}
+
+	p, err := s.participantRepo.GetByID(r.Context(), id)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to reload participant", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(p)
+}
+
+func (s *Server) handleListContracts(w http.ResponseWriter, r *http.Request) {
+	if s.contractRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Contract repository not configured")
+		return
+	}
+
+	contracts, err := s.contractRepo.ListContracts(r.Context())
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Query Failed", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(contracts)
+}
+
+func (s *Server) handleGetContractConfirmation(w http.ResponseWriter, r *http.Request) {
+	if s.contractRepo == nil || s.participantRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Repositories not configured")
+		return
+	}
+
+	tradeID := r.PathValue("id")
+	c, err := s.contractRepo.GetByID(r.Context(), tradeID)
+	if err != nil {
+		if errors.Is(err, contract.ErrContractNotFound) {
+			writeProblem(w, http.StatusNotFound, "Contract Not Found", tradeID)
+			return
+		}
+		writeProblem(w, http.StatusInternalServerError, "Database Error", err.Error())
+		return
+	}
+
+	buyer, err := s.participantRepo.GetByID(r.Context(), c.BuyerID)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Buyer Lookup Failed", err.Error())
+		return
+	}
+
+	seller, err := s.participantRepo.GetByID(r.Context(), c.SellerID)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Seller Lookup Failed", err.Error())
+		return
+	}
+
+	buyerParty := contract.ConfirmationParty{
+		ID:           buyer.ID,
+		LegalName:    buyer.LegalName,
+		Jurisdiction: buyer.Jurisdiction,
+		Role:         buyer.Role,
+	}
+
+	sellerParty := contract.ConfirmationParty{
+		ID:           seller.ID,
+		LegalName:    seller.LegalName,
+		Jurisdiction: seller.Jurisdiction,
+		Role:         seller.Role,
+	}
+
+	doc := contract.GenerateConfirmation(c, buyerParty, sellerParty, 168)
+
+	// Persist the SHA-256 digest on the contract record if not already recorded
+	if c.SignedPDFHash == nil || *c.SignedPDFHash == "" {
+		_ = s.contractRepo.UpdateSignedPDFHash(r.Context(), tradeID, doc.SHA256Checksum, "s3://verinode-confirmations/"+tradeID+".txt")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(doc)
+}
+
+func (s *Server) handleGetContractEvents(w http.ResponseWriter, r *http.Request) {
+	if s.contractRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Contract repository not configured")
+		return
+	}
+
+	tradeID := r.PathValue("id")
+	events, err := s.contractRepo.GetContractEvents(r.Context(), tradeID)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to retrieve events", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(events)
+}
+
+func (s *Server) handleListAdminAudit(w http.ResponseWriter, r *http.Request) {
+	if s.contractRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Contract repository not configured")
+		return
+	}
+
+	limit := 100
+	if lStr := r.URL.Query().Get("limit"); lStr != "" {
+		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	events, err := s.contractRepo.ListAllEvents(r.Context(), limit)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to retrieve audit log", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(events)
+}
+
+func (s *Server) handleListClaims(w http.ResponseWriter, r *http.Request) {
+	if s.claimsRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Claims repository not configured")
+		return
+	}
+
+	stateFilter := r.URL.Query().Get("state")
+	claimsList, err := s.claimsRepo.List(r.Context(), stateFilter)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to query claims", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(claimsList)
+}
+
+func (s *Server) handleCreateClaim(w http.ResponseWriter, r *http.Request) {
+	if s.claimsRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Claims repository not configured")
+		return
+	}
+
+	var req claims.Claim
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+
+	if err := s.claimsRepo.Create(r.Context(), &req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Claim Creation Failed", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(req)
+}
+
+func (s *Server) handleResolveClaim(w http.ResponseWriter, r *http.Request) {
+	if s.claimsRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Claims repository not configured")
+		return
+	}
+
+	claimID := r.PathValue("id")
+	var req struct {
+		TargetState string `json:"target_state"` // 'resolved' or 'disputed'
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+
+	if req.TargetState != "resolved" && req.TargetState != "disputed" {
+		writeProblem(w, http.StatusBadRequest, "Invalid Target State", "target_state must be 'resolved' or 'disputed'")
+		return
+	}
+
+	if err := s.claimsRepo.Resolve(r.Context(), claimID, req.TargetState); err != nil {
+		if errors.Is(err, claims.ErrClaimNotFound) {
+			writeProblem(w, http.StatusNotFound, "Claim Not Found", claimID)
+			return
+		}
+		writeProblem(w, http.StatusInternalServerError, "Claim Resolution Failed", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"claim_id":     claimID,
+		"state":        req.TargetState,
+		"resolved_at":  time.Now().UTC(),
 	})
 }
