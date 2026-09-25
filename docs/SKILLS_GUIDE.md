@@ -1,75 +1,53 @@
 # Verinode — Skills Guide & Applied Engineering Workflows
 
-*Comprehensive guide to specialized skills installed in this repository and how to apply them across backend, frontend, security, and architecture workstreams.*
+*Comprehensive catalog of all specialized skills installed in `.agents/skills/` (and `.skills/`), organized by domain with direct application patterns to Verinode.*
 
 ---
 
-## 1. Newly Installed Skills (`.agents/skills/` & `.skills/`)
+## 1. Complete Catalog of Repository Skills
 
-The following specialized engineering skills have been installed directly into the repository and configured for Antigravity:
+### A. Core Backend & Database Skills (Go 1.22+ & PostgreSQL)
+| Skill | Primary Focus | Application in Verinode |
+|---|---|---|
+| **`golang-project-layout`** | Standard Go package structure | Structuring `services/internal/{contract,ledger,rfq,participant,inventory,telemetry}` to prevent cyclic dependencies. |
+| **`golang-error-handling`** | Sentinel errors & error wrapping | RFC 7807 problem details in API Gateway, structured errors for invalid state hops and double-entry imbalances. |
+| **`golang-database`** | Transactions & connection pooling | PostgreSQL transactional outbox pattern and atomic double-entry balance insertions (`SUM(amount_cents) == 0`). |
+| **`golang-concurrency`** | Goroutines, channels, worker pools | High-throughput telemetry ingestion pipeline and outbox background publisher workers. |
+| **`golang-testing`** | Table-driven tests & race detection | Testing all legal and illegal contract state transitions with `go test -race ./...`. |
+| **`golang-code-style`** | Clean naming & memory patterns | Enforcing idiomatic Go standards across all core microservices. |
 
-| Skill | Source | Primary Purpose | How to Apply to Verinode |
-|---|---|---|---|
-| **`golang-project-layout`** | `samber/cc-skills-golang` | Idiomatic Go package structure and domain separation | Use when structuring `services/internal/{contract,ledger,rfq,telemetry}` to prevent cyclic imports and keep domain models clean. |
-| **`golang-error-handling`** | `samber/cc-skills-golang` | Custom error types, wrapping (`fmt.Errorf("%w")`), sentinel errors | Use for standardizing problem-details error responses in the API Gateway and bubbling ledger failure states. |
-| **`golang-database`** | `samber/cc-skills-golang` | SQL transactions, connection pooling, prepared statements, migrations | Essential for implementing the PostgreSQL transactional outbox pattern and atomic double-entry ledger debit/credit batches. |
-| **`golang-concurrency`** | `samber/cc-skills-golang` | Goroutines, channels, worker pools, select, mutexes | Use for the high-throughput Telemetry Gateway ingestion pipeline and background event outbox polling workers. |
-| **`golang-testing`** | `samber/cc-skills-golang` | Table-driven tests, subtests, race detector, mocking | Use to write table-driven test suites asserting all 18 valid contract transitions and asserting all illegal transitions fail. |
-| **`golang-code-style`** | `samber/cc-skills-golang` | Idiomatic Go naming, interface design, slice allocations | Enforces clean, production-grade Go code style across all `services/` code. |
-| **`vercel-react-best-practices`** | `vercel-labs/agent-skills` | Next.js 14 App Router, Server Components, client boundaries, memoization | Use when building the Buyer and Seller web portals in `apps/web` to avoid unnecessary client re-renders and waterfalls. |
+### B. Frontend & UI Engineering Skills (Next.js 14+ & Tailwind)
+| Skill | Primary Focus | Application in Verinode |
+|---|---|---|
+| **`nextjs-app-router-patterns`** | App Router routing & data fetching | Layout hierarchy for Buyer Portal (`/buyer`), Seller Portal (`/seller`), and Admin Desk (`/admin`). |
+| **`vercel-react-best-practices`** | Performance & Server Components | Zero-waterfall data fetching, client-server component boundaries, fast SSR for market data. |
+| **`tailwind-design-system`** | Tokenized CSS & responsive design | Clean design system tokens for institutional compute dashboard styling. |
+| **`shadcn-ui`** | Reusable accessible UI primitives | Building data tables, modals, RFQ comparison drawers, and contract sign sheets. |
 
----
-
-## 2. Globally Available High-Impact Skills
-
-These built-in and global Antigravity skills should be referenced during specific development phases:
-
-### Architecture & Domain Design
-* **`domain-modeling`**:
-  * **When to use:** Whenever updating entities or writing Architecture Decision Records (ADRs).
-  * **Application:** Keeps the Canonical Trade Envelope, Grade specifications, and Ledger account types consistent across Go, Python, and TypeScript.
-* **`codebase-design`**:
-  * **When to use:** When designing interface seams between internal Go packages.
-  * **Application:** Ensures deep module interfaces (simple public APIs concealing rich state logic).
-* **`karpathy-guidelines`**:
-  * **When to use:** Continuous development guide to prevent LLM over-engineering.
-  * **Application:** Encourages small, surgical, verifiable diffs and avoids premature abstraction layers.
-
-### Quality, Testing & Security
-* **`tdd` (Test-Driven Development)**:
-  * **When to use:** Developing the contract state machine and double-entry ledger.
-  * **Application:** Write the failing test for an invalid state transition (e.g. `LIVE → CONTRACT_PENDING` must fail) before writing the transition handler.
-* **`security-audit` & **`bug-bounty`**:
-  * **When to use:** Reviewing API endpoints, authentication middlewares, and telemetry signature verifications.
-  * **Application:** Verifies that no IDOR vulnerabilities exist on `/contracts/{id}` or `/rfqs/{id}`, and confirms host telemetry signatures are validated before writing to ClickHouse.
-* **`setup-pre-commit`**:
-  * **When to use:** Configuring local Git hooks.
-  * **Application:** Runs `go vet`, `go fmt`, and `pnpm typecheck` before allowing a commit.
-
-### Frontend Polish & Marketing
-* **`emil-design-eng`**:
-  * **When to use:** Building the Next.js interactive portals.
-  * **Application:** Adds high-grade UI polish, micro-interactions, smooth status badge transitions, and responsive data tables.
-* **`landing-page-design`**:
-  * **When to use:** Building the public homepage (`verinode.io`).
-  * **Application:** Enforces clear typography, conversion layouts, and institutional credibility for enterprise buyers and cloud suppliers.
+### C. Phase 4 Blockchain & Smart Contracts (Gated Rails)
+| Skill | Primary Focus | Application in Verinode |
+|---|---|---|
+| **`solana-dev`** *(Solana Foundation)* | Rust & Anchor smart contracts | Writing the optional Phase 4 stablecoin escrow program with isolated per-trade PDAs. |
+| **`solana-vulnerability-scanner`** *(Trail of Bits)* | Solana smart contract security | Static analysis, account ownership validation, and PDA collision prevention for the escrow program. |
+| **`solidity-security`** | EVM smart contract vulnerabilities | Reentrancy, access control, and integer overflow audits for optional Arbitrum / EVM escrow adapters. |
+| **`web3-testing`** | Foundry, Hardhat & mock RPC testing | Writing invariant tests and property-based test suites for smart contracts. |
+| **`hyperliquid`** | Hyperliquid L1 & SDK integrations | Evaluating hedge venue integrations and read-only pricing feeds for Phase 4 secondary market research. |
 
 ---
 
-## 3. Concrete Applied Workflows
+## 2. Practical Execution Workflows
 
-### Scenario A: Implementing a New Contract State Transition in Go
-1. Consult **`domain-modeling`** and [`docs/04-data-model-schema.md`](04-data-model-schema.md) to confirm the valid prior and new states.
-2. Follow **`tdd`** and **`golang-testing`**: Create `contract_state_test.go` with a table-driven test matrix defining allowed and disallowed transitions.
-3. Apply **`golang-error-handling`**: Define typed sentinel errors (`ErrInvalidStateTransition`, `ErrDuplicateIdempotencyKey`).
-4. Implement the transition using **`golang-database`** inside a single database transaction that atomically updates `contracts` and appends to `contract_events` and `event_outbox`.
+### Scenario 1: Building the Next.js Buyer RFQ Dashboard
+1. Load **`nextjs-app-router-patterns`**: Set up route groups `app/(buyer)/rfqs/page.tsx` and `app/(buyer)/rfqs/[id]/page.tsx`.
+2. Load **`shadcn-ui`** & **`tailwind-design-system`**: Generate accessible tables for listing quotes with firm pricing in cents and expiry countdowns.
+3. Apply **`vercel-react-best-practices`**: Use Server Actions or React Query mutations with optimistic UI updates for quote acceptance.
 
-### Scenario B: Building the Buyer RFQ Creation Interface in Next.js
-1. Follow **`vercel-react-best-practices`**: Place page routing in `apps/web/app/(buyer)/rfqs/new/page.tsx` using Server Components for static layouts and Client Components for form state.
-2. Apply **`emil-design-eng`**: Add subtle hover states, real-time tenor calculators (e.g. converting 168 hours to days/weeks), and instant validation feedback.
-3. Validate forms with Zod types mapped 1:1 to the OpenAPI specification in [`docs/03-api-specification.md`](03-api-specification.md).
+### Scenario 2: Developing the Go Double-Entry Ledger
+1. Load **`golang-database`**: Ensure all ledger entries within a `transaction_id` execute in a single `tx.BeginTx` with serializable or read-committed isolation.
+2. Load **`golang-testing`**: Write table-driven unit tests verifying that unbalanced transactions (`debits != credits`) fail at the database constraint and application layer.
+3. Load **`golang-error-handling`**: Return typed `ErrLedgerUnbalanced` with debit/credit details.
 
-### Scenario C: Reviewing Code Before Merging
-1. Run **`karpathy-guidelines`** checklist: Is this change minimal? Does it introduce unnecessary dependencies?
-2. Run **`security-audit`**: Does this endpoint verify that the authenticated participant matches the entity ID in the path? Are SQL queries parameterized?
-3. Run `go test ./... -race` and `pnpm typecheck`.
+### Scenario 3: Developing the Phase 4 Solana Escrow (When Triggered)
+1. Load **`solana-dev`**: Scaffold an Anchor program with instructions: `initialize_escrow`, `deposit_funds`, `release_funds`, `dispute_funds`.
+2. Verify with **`solana-vulnerability-scanner`**: Audit signer verification and assert that funds can only be released to the buyer/seller designated in the PDA seed (`trade_id`).
+3. Enforce **`AGENTS.md` Invariant 6**: Confirm that off-chain Postgres remains the source of truth, and the Solana program only mirrors the confirmed state transition.

@@ -37,11 +37,59 @@
       "skillPath": "skills/golang-testing/SKILL.md",
       "computedHash": "31b691f568f4c00d8d7bedc65a38d9966d9f3d353712929a1a8805eaa3f88b00"
     },
+    "hyperliquid": {
+      "source": "starchild-ai-agent/official-skills",
+      "sourceType": "github",
+      "skillPath": "hyperliquid/SKILL.md",
+      "computedHash": "3cea2b2feceb608df7497ce2f78af63da2bb5dc4e893c92433b0a73b418c4185"
+    },
+    "nextjs-app-router-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-mobile-development/skills/nextjs-app-router-patterns/SKILL.md",
+      "computedHash": "b4fea42eecf1f803155ef7fa133d5286ee8f2dbba3e616954e9e43c6f0ffc144"
+    },
+    "shadcn-ui": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/shadcn-ui/SKILL.md",
+      "computedHash": "a2c4e57faab8e31f3df91156edf2df1a5a7f6c242249b2d86ca11336c9183157"
+    },
+    "solana-dev": {
+      "source": "solana-foundation/solana-dev-skill",
+      "sourceType": "github",
+      "skillPath": "skills/solana-dev/SKILL.md",
+      "computedHash": "eb859fe9380cd31f044e9e5f5470703cea14740c1e99d59057bf532e4c82bdb8"
+    },
+    "solana-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/building-secure-contracts/skills/solana-vulnerability-scanner/SKILL.md",
+      "computedHash": "b2a3f748a819f4a75678c702280ee0adc6305b246d0d9df0cff057a5083cc6d9"
+    },
+    "solidity-security": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/blockchain-web3/skills/solidity-security/SKILL.md",
+      "computedHash": "14ce11370490def3e2249ca01891d1b2ce7cecb4450a7ec2a10181ff0ad23d06"
+    },
+    "tailwind-design-system": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
+      "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-best-practices/SKILL.md",
       "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
+    },
+    "web3-testing": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/blockchain-web3/skills/web3-testing/SKILL.md",
+      "computedHash": "0bc9248c2d886879c0364fc1c49f12b137572185ef9aeb7752ff0bd4a95f4ca4"
     }
   }
 }

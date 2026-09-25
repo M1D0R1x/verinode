@@ -41,20 +41,34 @@ The `index-service/` operates in a **separate trust domain**. It must never have
 
 ## 3. Skill & Context Pointers
 
-When performing tasks in this repository, load and follow these specialized skills:
+When performing tasks in this repository, load and follow these specialized skills installed in `.agents/skills/`:
 
-| Trigger / Task Domain | Relevant Skill Location |
-|---|---|
-| Designing Go project structure & packages | `.agents/skills/golang-project-layout` & `codebase-design` |
-| Writing Go error handling & wrapping | `.agents/skills/golang-error-handling` |
-| Writing Go unit/integration tests | `.agents/skills/golang-testing` & `tdd` |
-| Writing Go database queries & transactions | `.agents/skills/golang-database` |
-| Go concurrency, channels, and locks | `.agents/skills/golang-concurrency` |
-| Building Next.js / React UI components | `.agents/skills/vercel-react-best-practices` & `emil-design-eng` |
-| Designing institutional landing pages | `landing-page-design` |
-| Modeling domain entities, invariants, & ADRs | `domain-modeling` |
-| Preventing over-engineering & code sprawl | `karpathy-guidelines` |
-| Security auditing & financial vulnerability testing | `security-audit` & `bug-bounty` |
+### Core Backend (Go & Data)
+- **Go Project Layout**: `.agents/skills/golang-project-layout` & `codebase-design`
+- **Go Error Handling**: `.agents/skills/golang-error-handling`
+- **Go Testing & TDD**: `.agents/skills/golang-testing` & `tdd`
+- **Go Database & Outbox**: `.agents/skills/golang-database`
+- **Go Concurrency & Channels**: `.agents/skills/golang-concurrency`
+- **Go Code Style**: `.agents/skills/golang-code-style`
+
+### Frontend & UI Design (Next.js & React)
+- **Next.js App Router Architecture**: `.agents/skills/nextjs-app-router-patterns`
+- **React & Next.js Performance**: `.agents/skills/vercel-react-best-practices`
+- **Tailwind Design System**: `.agents/skills/tailwind-design-system`
+- **Component Design & UI Polish**: `.agents/skills/shadcn-ui` & `emil-design-eng`
+- **Institutional Landing Page**: `landing-page-design`
+
+### Phase 4 Blockchain & Smart Contracts (Gated Rails)
+- **Solana & Anchor Development**: `.agents/skills/solana-dev`
+- **Solana Security Audit**: `.agents/skills/solana-vulnerability-scanner`
+- **Solidity / Arbitrum Smart Contracts**: `.agents/skills/solidity-security`
+- **Web3 & Smart Contract Testing**: `.agents/skills/web3-testing`
+- **Hyperliquid Market & L1 Integration**: `.agents/skills/hyperliquid`
+
+### Cross-Cutting Security & Process
+- **Domain Modeling**: `domain-modeling`
+- **Preventing Over-Engineering**: `karpathy-guidelines`
+- **Security & Vulnerability Auditing**: `security-audit` & `bug-bounty`
 
 ---
 
