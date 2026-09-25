@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -30,6 +30,19 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
   const sellerName = "Nebula Compute Infrastructure LLC";
   const totalCents = 3696000; // $36,960.00
   const pdfHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+  useEffect(() => {
+    api
+      .getContract(tradeId)
+      .then((c) => {
+        if (c && c.state) {
+          setContractState(c.state);
+        }
+      })
+      .catch(() => {
+        // Fallback to initial state if offline
+      });
+  }, [tradeId]);
 
   const handleOpenClaim = async () => {
     if (confirm("Open an SLA performance claim with cryptographic telemetry evidence bundle?")) {

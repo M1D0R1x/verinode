@@ -117,3 +117,8 @@ playwright-report/
 blob-report/
 playwright/.cache/
 k6-results/
+
+# Rust / Solana
+target/
+packages/solana/target/
+

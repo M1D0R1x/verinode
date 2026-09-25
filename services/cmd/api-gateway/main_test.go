@@ -15,64 +15,7 @@ import (
 )
 
 func setupTestServer() http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "healthy",
-		})
-	})
-
-	mux.HandleFunc("GET /v1/grades", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
-			{"id": "H100-SXM-8XNV", "gpu_sku": "NVIDIA H100 SXM 80GB"},
-		})
-	})
-
-	mux.HandleFunc("POST /v1/contracts/validate-transition", func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			CurrentState   string                 `json:"current_state"`
-			NextState      string                 `json:"next_state"`
-			Actor          string                 `json:"actor"`
-			Reason         string                 `json:"reason"`
-			IdempotencyKey string                 `json:"idempotency_key"`
-			AuthDecision   map[string]interface{} `json:"authorization_decision"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
-			return
-		}
-		if req.CurrentState == "settled" && req.NextState == "open" {
-			writeProblem(w, http.StatusUnprocessableEntity, "Transition Rejected", "terminal state")
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"valid": true})
-	})
-
-	mux.HandleFunc("POST /v1/telemetry/attestations/verify", func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Report    telemetry.HardwareReport `json:"report"`
-			Signature string                   `json:"signature"`
-			PublicKey string                   `json:"public_key"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
-			return
-		}
-		pubKeyBytes, _ := base64.StdEncoding.DecodeString(req.PublicKey)
-		sigBytes, _ := base64.StdEncoding.DecodeString(req.Signature)
-		if err := telemetry.VerifyHardwareAttestation(ed25519.PublicKey(pubKeyBytes), req.Report, sigBytes); err != nil {
-			writeProblem(w, http.StatusUnauthorized, "Cryptographic Verification Failed", err.Error())
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"verified": true})
-	})
-
-	return mux
+	return NewServer(nil, nil, nil, nil, nil, nil)
 }
 
 func TestHealthCheckEndpoint(t *testing.T) {
@@ -227,3 +170,49 @@ func TestTelemetryAttestationVerificationEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestUnconfiguredDatabaseGracefulServiceUnavailable(t *testing.T) {
+	t.Parallel()
+
+	// Server with nil repos returns 503 Service Unavailable with RFC 7807 problem details
+	handler := setupTestServer()
+
+	endpoints := []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{"POST", "/v1/participants", `{"legal_name":"Test LLC"}`},
+		{"GET", "/v1/participants", ""},
+		{"POST", "/v1/inventory/blocks", `{"grade_id":"H100-SXM-8XNV"}`},
+		{"GET", "/v1/inventory/blocks", ""},
+		{"POST", "/v1/rfqs", `{"grade_id":"H100-SXM-8XNV"}`},
+		{"GET", "/v1/rfqs/some-id", ""},
+		{"POST", "/v1/rfqs/some-id/quotes", `{"price_cents":100}`},
+		{"GET", "/v1/rfqs/some-id/quotes", ""},
+		{"POST", "/v1/rfqs/some-id/quotes/q-id/accept", `{"buyer_id":"b-id"}`},
+		{"GET", "/v1/contracts/c-id", ""},
+		{"POST", "/v1/contracts/c-id/advance", `{"next_state":"live"}`},
+	}
+
+	for _, ep := range endpoints {
+		ep := ep
+		t.Run(ep.method+" "+ep.path, func(t *testing.T) {
+			t.Parallel()
+			var req *http.Request
+			if ep.body != "" {
+				req = httptest.NewRequest(ep.method, ep.path, bytes.NewBufferString(ep.body))
+			} else {
+				req = httptest.NewRequest(ep.method, ep.path, nil)
+			}
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusServiceUnavailable {
+				t.Fatalf("expected 503 Service Unavailable, got %d for %s %s", rec.Code, ep.method, ep.path)
+			}
+		})
+	}
+}
+

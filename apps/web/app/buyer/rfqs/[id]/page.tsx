@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, ShieldCheck, Check, ArrowRight, Server } from "lucide-react";
 import { formatCents } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 interface MockQuote {
   id: string;
@@ -55,16 +56,28 @@ export default function RFQQuotesPage({ params }: { params: { id: string } }) {
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [isAccepting, setIsAccepting] = useState(false);
 
-  const handleAccept = (quote: MockQuote) => {
+  const handleAccept = async (quote: MockQuote) => {
     setSelectedQuoteId(quote.id);
     setIsAccepting(true);
 
-    // Simulate transition ACCEPTED -> CONTRACT_PENDING
+    try {
+      const res = await api.acceptQuote(
+        params.id,
+        quote.id,
+        "00000000-0000-0000-0000-000000000001"
+      );
+      if (res && res.contract_id) {
+        router.push(`/buyer/contracts/${res.contract_id}`);
+        return;
+      }
+    } catch {
+      // Graceful fallback for offline demo
+    }
+
     setTimeout(() => {
       setIsAccepting(false);
-      // Redirect to the contract review and delivery monitor
       router.push(`/buyer/contracts/trade_c8f921a4-9b2e-4b13-91dc-837264819011`);
-    }, 1200);
+    }, 1000);
   };
 
   return (
