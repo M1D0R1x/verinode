@@ -10,15 +10,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#090A0F",
-        surface: "#10121A",
-        surfaceSubtle: "#181B26",
-        border: "#232736",
-        borderHighlight: "#333A4D",
+        background: "#000000",
+        surface: "#121212",
+        surfaceSubtle: "#181818",
+        card: "#181818",
+        border: "#272727",
+        borderHighlight: "#383838",
         primary: {
-          DEFAULT: "#3B82F6",
-          hover: "#2563EB",
-          foreground: "#FFFFFF",
+          DEFAULT: "#FFFFFF",
+          hover: "#E4E4E7",
+          foreground: "#09090B",
         },
         accent: {
           DEFAULT: "#10B981", // Verification emerald
@@ -26,13 +27,13 @@ const config: Config = {
           foreground: "#FFFFFF",
         },
         muted: {
-          DEFAULT: "#8E9BB0",
-          foreground: "#5B6577",
+          DEFAULT: "#A1A1AA",
+          foreground: "#71717A",
         },
       },
       fontFamily: {
-        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        mono: ["JetBrains Mono", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
     },
   },

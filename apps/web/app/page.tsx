@@ -11,268 +11,131 @@ import {
   BarChart3,
   Server,
   Terminal,
+  HelpCircle,
 } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-32 bg-grid border-b border-border/80">
-        {/* Glow backdrop */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary/10 blur-[140px] pointer-events-none rounded-full" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-surface text-xs font-mono text-zinc-300 mb-6 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-            <span>Benchmark Grade: 8x H100 SXM 80GB (168-Hour Block)</span>
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.15]">
-            Physically Delivered GPU Capacity.{" "}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">
-              Legally & Cryptographically Enforceable.
-            </span>
-          </h1>
-
-          <p className="mt-6 text-base sm:text-lg text-muted max-w-2xl mx-auto leading-relaxed">
-            Trade bilateral, non-transferable physical reservations for verified enterprise GPU nodes. Built on standardized forward contracts, host-level ed25519 hardware telemetry, and institutional banking escrow.
-          </p>
-
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/buyer/rfqs/new"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-sm transition-all shadow-lg shadow-primary/20"
-            >
-              <span>Submit Private RFQ</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-
-            <Link
-              href="/seller"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-surface hover:bg-surfaceSubtle border border-border hover:border-borderHighlight text-white font-medium text-sm transition-all"
-            >
-              <span>List GPU Capacity</span>
-            </Link>
-          </div>
-
-          {/* Quick Metrics Bar */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-            <div className="p-4 rounded-xl bg-surface/80 border border-border">
-              <span className="text-xs text-muted font-mono uppercase">Delivery Unit</span>
-              <p className="text-lg font-bold text-white mt-1">168 Hours (1 Wk)</p>
-              <span className="text-[11px] text-zinc-400">Continuous take-or-pay</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface/80 border border-border">
-              <span className="text-xs text-muted font-mono uppercase">Interconnect Floor</span>
-              <p className="text-lg font-bold text-emerald-400 mt-1">$\ge$ 400 GB/s</p>
-              <span className="text-[11px] text-zinc-400">NCCL All-Reduce synthetic</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface/80 border border-border">
-              <span className="text-xs text-muted font-mono uppercase">Regulatory Posture</span>
-              <p className="text-lg font-bold text-blue-400 mt-1">Forward Exclusion</p>
-              <span className="text-[11px] text-zinc-400">CFTC physical commodity</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface/80 border border-border">
-              <span className="text-xs text-muted font-mono uppercase">Host Telemetry</span>
-              <p className="text-lg font-bold text-purple-400 mt-1">ed25519 Signed</p>
-              <span className="text-[11px] text-zinc-400">Zero customer data ingested</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* THE 4 OFFERINGS COMPARISON */}
-      <section className="py-20 bg-background border-b border-border">
+    <div className="flex flex-col min-h-screen bg-black text-[#EDEDED]">
+      {/* 1. HERO SECTION */}
+      <section className="relative pt-20 pb-24 md:pt-28 md:pb-32 border-b border-[#272727]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              The Product Boundary: Why Physical Delivery Matters
-            </h2>
-            <p className="mt-3 text-sm text-muted">
-              Verinode builds exactly one product: standardized physical forward reservations. We do not conflate spot computing with cash derivatives.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-border text-muted uppercase font-mono text-[11px]">
-                  <th className="py-3 px-4">Offering Type</th>
-                  <th className="py-3 px-4">Core Promise</th>
-                  <th className="py-3 px-4">Primary Risk</th>
-                  <th className="py-3 px-4">Verinode Lane</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                <tr className="hover:bg-surface/30 transition-colors">
-                  <td className="py-4 px-4 font-semibold text-zinc-300">Spot Capacity Marketplace</td>
-                  <td className="py-4 px-4 text-zinc-400">Compute available now or soon</td>
-                  <td className="py-4 px-4 text-zinc-400">Interruption, preemption, variable topology</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-400">
-                      Not Built (AWS/RunPod)
-                    </span>
-                  </td>
-                </tr>
-
-                <tr className="bg-primary/5 hover:bg-primary/10 transition-colors border-l-2 border-l-primary">
-                  <td className="py-4 px-4 font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-accent" />
-                    <span>Physical Forward Reservation</span>
-                  </td>
-                  <td className="py-4 px-4 text-white font-medium">Specified future node at fixed price, verified delivery</td>
-                  <td className="py-4 px-4 text-zinc-300">Delivery delay & counterparty default</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
-                      VERINODE CORE MOAT
-                    </span>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-surface/30 transition-colors">
-                  <td className="py-4 px-4 font-semibold text-zinc-300">Financial Derivative (Cash-Settled)</td>
-                  <td className="py-4 px-4 text-zinc-400">Cash payout based on a price index</td>
-                  <td className="py-4 px-4 text-zinc-400">Leverage, basis risk, speculative licensing</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-400">
-                      Not Built (CME / ICE)
-                    </span>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-surface/30 transition-colors">
-                  <td className="py-4 px-4 font-semibold text-zinc-300">Enterprise Bilateral Contract</td>
-                  <td className="py-4 px-4 text-zinc-400">Bespoke SLA, enterprise support, tailored liability</td>
-                  <td className="py-4 px-4 text-zinc-400">Slow procurement, non-standard terms</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-300">
-                      Master Confirmation Wrapper
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* STANDARDIZED GRADE SPECIFICATION */}
-      <section id="grades" className="py-20 bg-surface/30 border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
-              <span className="text-xs font-mono text-primary uppercase tracking-wider">Delivery Grade Ontology</span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
-                Benchmark Spec: H100-SXM-8XNV
-              </h2>
+          <div className="text-center max-w-4xl mx-auto space-y-6">
+            {/* Status Pill */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#272727] bg-[#121212] text-xs font-mono text-zinc-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>Benchmark Grade: 8x H100 SXM 80GB (168-Hour Block)</span>
             </div>
-            <p className="mt-3 md:mt-0 text-xs text-muted max-w-md">
-              Every contract specifies an exact hardware grade with zero permissible "equivalent" substitutions. If it doesn't match the benchmark floor, it isn't delivered.
+
+            {/* Main Headline with subtle left-to-right gradient (#FFFFFF -> #9B9B9B) per landing-page-design B5 */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-[#9B9B9B] leading-[1.1]">
+              Physical GPU capacity. Guaranteed delivery.
+            </h1>
+
+            {/* Subheadline: clarify what it is, outcome plus audience */}
+            <p className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+              Bilateral, non-transferable capacity forward reservations for verified enterprise GPU clusters. Standardized contracts, ed25519 host canary verification, and balanced double-entry escrow.
             </p>
+
+            {/* CTAs: Emil Kowalski active state + landing-page-design button sizes */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/buyer/rfqs/new"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.98] shadow-sm"
+              >
+                <span>Submit Allocation RFQ</span>
+                <ArrowRight className="h-4 w-4 text-zinc-950" />
+              </Link>
+
+              <Link
+                href="/seller"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#181818] hover:bg-[#222222] border border-[#272727] text-white font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.98]"
+              >
+                <span>List Hardware Capacity</span>
+              </Link>
+            </div>
+
+            {/* Proof Signal Bar */}
+            <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto text-left text-xs font-mono">
+              <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 uppercase block text-xs">Standardized Tenor</span>
+                <p className="text-base font-bold text-white mt-1">168 Hours (1 Wk)</p>
+                <span className="text-zinc-400 text-xs">Continuous take-or-pay</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 uppercase block text-xs">NCCL Floor Gate</span>
+                <p className="text-base font-bold text-emerald-400 mt-1">&ge; 400 GB/s</p>
+                <span className="text-zinc-400 text-xs">Pre-delivery canary pass</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 uppercase block text-xs">Legal Perimeter</span>
+                <p className="text-base font-bold text-white mt-1">Forward Exclusion</p>
+                <span className="text-zinc-400 text-xs">CFTC physical commodity</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 uppercase block text-xs">Zero Workload Ingest</span>
+                <p className="text-base font-bold text-emerald-400 mt-1">ed25519 Signed</p>
+                <span className="text-zinc-400 text-xs">No code or weights touched</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Spec Details Card */}
-            <div className="lg:col-span-2 p-6 rounded-2xl bg-surface border border-border space-y-6">
-              <div className="flex items-center justify-between border-b border-border/80 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-surfaceSubtle border border-border">
-                    <Server className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-white">8x NVIDIA H100 SXM5 80GB</h3>
-                    <p className="text-xs text-muted font-mono">Series: H100-SXM-8XNV-US-WEEK-DEDICATED-USD</p>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800">
-                  Standard Benchmark
+          {/* Hero Visual: Institutional Terminal Preview */}
+          <div className="mt-14 max-w-4xl mx-auto rounded-xl border border-[#272727] bg-[#121212] overflow-hidden shadow-2xl">
+            {/* Terminal Header */}
+            <div className="px-4 py-3 bg-[#181818] border-b border-[#272727] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+                <span className="ml-2 text-xs font-mono text-zinc-400">
+                  VERINODE CONTRACT EXECUTION DESK — TRADE #c37610f3
                 </span>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-mono">
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">TOTAL VRAM</span>
-                  <span className="text-white text-base font-bold mt-0.5 block">640 GB HBM3</span>
-                  <span className="text-zinc-500 text-[10px]">8x 80GB GPUs</span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">INTERCONNECT</span>
-                  <span className="text-white text-base font-bold mt-0.5 block">NVLink 4.0</span>
-                  <span className="text-zinc-500 text-[10px]">900 GB/s bidirectional</span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">BENCHMARK FLOOR</span>
-                  <span className="text-emerald-400 text-base font-bold mt-0.5 block">400.0 GB/s</span>
-                  <span className="text-zinc-500 text-[10px]">NCCL All-Reduce</span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">HOST CPU CORES</span>
-                  <span className="text-white text-base font-bold mt-0.5 block">112 Cores</span>
-                  <span className="text-zinc-500 text-[10px]">Dual Intel Xeon / AMD EPYC</span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">SYSTEM RAM</span>
-                  <span className="text-white text-base font-bold mt-0.5 block">1,024 GB</span>
-                  <span className="text-zinc-500 text-[10px]">DDR5 ECC registered</span>
-                </div>
-
-                <div className="p-3 rounded-lg bg-surfaceSubtle border border-border/60">
-                  <span className="text-muted block text-[10px]">NVME SCRATCH IOPS</span>
-                  <span className="text-white text-base font-bold mt-0.5 block">100,000 IOPS</span>
-                  <span className="text-zinc-500 text-[10px]">Direct local scratch storage</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-surfaceSubtle/50 border border-border text-xs text-muted space-y-1.5">
-                <span className="font-semibold text-zinc-300 block">Hardware Acceptance Rule:</span>
-                <p>
-                  Delivery only reaches <span className="font-mono text-emerald-400">LIVE</span> state when SSH/IPMI credentials verify, scheduler shows dedicated capacity, attestation matches SXM5 NVLink topology, and the synthetic NCCL all-reduce canary completes $\ge$ 400 GB/s with 0 unrecovered ECC errors.
-                </p>
+              <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>CANARY PASS VERIFIED</span>
               </div>
             </div>
 
-            {/* Quick Action Sidecard */}
-            <div className="p-6 rounded-2xl bg-surface border border-border flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-mono text-primary mb-3">
-                  <Activity className="h-4 w-4" />
-                  <span>Market Availability</span>
+            {/* Terminal Body */}
+            <div className="p-6 font-mono text-xs space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3 rounded-lg bg-[#000000] border border-[#272727] space-y-1">
+                  <span className="text-zinc-500 block text-xs">BENCHMARK SPECIFICATION</span>
+                  <div className="text-white font-semibold">8x NVIDIA H100 SXM5</div>
+                  <div className="text-zinc-400">640GB HBM3 | NVLink 4.0 900 GB/s</div>
                 </div>
-                <h3 className="font-bold text-white text-lg">Reserve an H100 Node</h3>
-                <p className="text-xs text-muted mt-2 leading-relaxed">
-                  Submit a private RFQ to vetted suppliers. Review firm quotes, execute tamper-evident confirmations, and fund via escrow.
-                </p>
 
-                <div className="mt-6 space-y-3 font-mono text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-border/60">
-                    <span className="text-muted">Standard Tenor:</span>
-                    <span className="text-white font-medium">168 Hours (7 Days)</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-border/60">
-                    <span className="text-muted">Regions:</span>
-                    <span className="text-white font-medium">US-East, US-West, EU</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-border/60">
-                    <span className="text-muted">Tenancy:</span>
-                    <span className="text-white font-medium">100% Bare-Metal Dedicated</span>
-                  </div>
+                <div className="p-3 rounded-lg bg-[#000000] border border-[#272727] space-y-1">
+                  <span className="text-zinc-500 block text-xs">CANARY BENCHMARK RESULT</span>
+                  <div className="text-emerald-400 font-semibold">405.2 GB/s AllReduce</div>
+                  <div className="text-zinc-400">Floor &ge; 400.0 GB/s (100% Passed)</div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#000000] border border-[#272727] space-y-1">
+                  <span className="text-zinc-500 block text-xs">ESCROW BALANCE (INVARIANT 3)</span>
+                  <div className="text-white font-semibold">$29,568.00 USD</div>
+                  <div className="text-emerald-400">Subledger Balanced (Sum == 0)</div>
                 </div>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-border">
+              {/* Legal Confirmation Snippet */}
+              <div className="p-3 rounded-lg bg-[#000000] border border-[#272727] text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-zinc-300" />
+                  <span>Master Legal Confirmation SHA-256:</span>
+                  <span className="text-white font-mono font-bold">4adec53cc851db49c10c317c5fc507e31...</span>
+                </div>
                 <Link
-                  href="/buyer/rfqs/new"
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-sm transition-all"
+                  href="/buyer"
+                  className="text-xs text-white hover:underline flex items-center gap-1 font-semibold"
                 >
-                  <span>Create Forward RFQ</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <span>Open Buyer Desk</span>
+                  <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </div>
@@ -280,81 +143,306 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* HOW VERINODE WORKS - 4 PILLARS */}
-      <section className="py-20 bg-background border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-mono text-accent uppercase tracking-wider">End-to-End Architecture</span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
-              Engineered for Institutional Reliability
+      {/* 2. TAGLINE REVEAL SECTION (Mandatory per landing-page-design B11) */}
+      <section className="py-20 border-b border-[#272727] bg-[#121212]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest block">
+            The Institutional Standard
+          </span>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white leading-snug">
+            Compute is not an abstract token. It is physical silicon in a data center with thermal and network limits. We make future access legally and cryptographically enforceable.
+          </p>
+        </div>
+      </section>
+
+      {/* 3. PROBLEM TO SOLUTION: THE 4 OFFERINGS BOUNDARY */}
+      <section className="py-24 border-b border-[#272727] bg-black">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              The Product Boundary: Why Physical Delivery Matters
             </h2>
+            <p className="text-sm text-zinc-400">
+              Verinode builds exactly one product: standardized physical forward reservations. We do not build continuous spot markets or cash-settled synthetic derivatives.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-xl bg-surface border border-border hover:border-primary/50 transition-all group">
-              <div className="h-10 w-10 rounded-lg bg-surfaceSubtle border border-border flex items-center justify-center text-primary mb-4 group-hover:scale-105 transition-transform">
-                <FileText className="h-5 w-5" />
+          <div className="overflow-x-auto rounded-xl border border-[#272727] bg-[#121212]">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-[#272727] text-zinc-400 uppercase font-mono text-xs bg-[#181818]">
+                  <th className="py-3.5 px-4 font-semibold">Offering Model</th>
+                  <th className="py-3.5 px-4 font-semibold">Platform Promise</th>
+                  <th className="py-3.5 px-4 font-semibold">Counterparty Risk</th>
+                  <th className="py-3.5 px-4 font-semibold">Verinode Position</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#272727] font-mono text-xs">
+                <tr className="hover:bg-[#181818] transition-colors duration-150">
+                  <td className="py-4 px-4 font-semibold text-white">Spot Capacity Market</td>
+                  <td className="py-4 px-4 text-zinc-400">Burst compute right now</td>
+                  <td className="py-4 px-4 text-zinc-400">Preemption, sudden price spikes, degraded topology</td>
+                  <td className="py-4 px-4 text-zinc-500">Excluded (AWS, RunPod lane)</td>
+                </tr>
+                <tr className="hover:bg-[#181818] transition-colors duration-150 bg-[#181818]/60">
+                  <td className="py-4 px-4 font-bold text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                    Physical Forward Reservation
+                  </td>
+                  <td className="py-4 px-4 text-white font-medium">Guaranteed future node delivery at fixed price</td>
+                  <td className="py-4 px-4 text-zinc-300">Default risk mitigated by bank escrow and canary test</td>
+                  <td className="py-4 px-4 text-emerald-400 font-bold">Verinode Core Moat (Invariant 1)</td>
+                </tr>
+                <tr className="hover:bg-[#181818] transition-colors duration-150">
+                  <td className="py-4 px-4 font-semibold text-white">Cash-Settled Synthetic Derivative</td>
+                  <td className="py-4 px-4 text-zinc-400">Synthetic cash payout against an index</td>
+                  <td className="py-4 px-4 text-zinc-400">Retail leverage, liquidations, cannot run model training</td>
+                  <td className="py-4 px-4 text-zinc-500">Excluded (CME, Hyperliquid lane)</td>
+                </tr>
+                <tr className="hover:bg-[#181818] transition-colors duration-150">
+                  <td className="py-4 px-4 font-semibold text-white">Bespoke Enterprise Contract</td>
+                  <td className="py-4 px-4 text-zinc-400">Multi-year custom commitments</td>
+                  <td className="py-4 px-4 text-zinc-400">Months of legal review, opaque SLAs with zero remedies</td>
+                  <td className="py-4 px-4 text-zinc-300">Standardized into Master Confirmation</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. BENEFITS (Outcome-driven per landing-page-design A2 & A5) */}
+      <section className="py-24 border-b border-[#272727] bg-[#121212]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              Institutional Guarantees
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Engineered for Enterprise Training Teams and Sovereign Compute Funds
+            </h2>
+            <p className="text-sm text-zinc-400">
+              Every feature solves an acute contract or performance risk that currently plagues the enterprise GPU market.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-xl bg-black border border-[#272727] space-y-3">
+              <div className="h-9 w-9 rounded-lg bg-[#181818] border border-[#272727] flex items-center justify-center text-white">
+                <Activity className="h-5 w-5 text-emerald-400" />
               </div>
-              <h3 className="font-bold text-white text-sm">1. Standardized Contract</h3>
-              <p className="text-xs text-muted mt-2 leading-relaxed">
-                Versioned confirmations executed under master agreements. Strict parameters eliminate ambiguous SLAs.
+              <h3 className="font-bold text-base text-white">
+                Synthetic canary verification before handover
+              </h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                A host daemon executes an automated NCCL AllReduce test 24 hours prior to delivery start. If bandwidth drops below 400 GB/s, cure remedies or full refunds trigger automatically.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-surface border border-border hover:border-primary/50 transition-all group">
-              <div className="h-10 w-10 rounded-lg bg-surfaceSubtle border border-border flex items-center justify-center text-accent mb-4 group-hover:scale-105 transition-transform">
-                <Lock className="h-5 w-5" />
+            <div className="p-6 rounded-xl bg-black border border-[#272727] space-y-3">
+              <div className="h-9 w-9 rounded-lg bg-[#181818] border border-[#272727] flex items-center justify-center text-white">
+                <Lock className="h-5 w-5 text-zinc-300" />
               </div>
-              <h3 className="font-bold text-white text-sm">2. Balanced Escrow</h3>
-              <p className="text-xs text-muted mt-2 leading-relaxed">
-                Double-entry financial subledger reconciled against bank statements. Funds release only upon verified delivery.
+              <h3 className="font-bold text-base text-white">
+                Zero customer workload ingestion
+              </h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Telemetry probes evaluate hardware health, PCI IDs, and NVLink mesh throughput only. Model weights, code, and training prompts never touch our gateway.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-surface border border-border hover:border-primary/50 transition-all group">
-              <div className="h-10 w-10 rounded-lg bg-surfaceSubtle border border-border flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform">
-                <Terminal className="h-5 w-5" />
+            <div className="p-6 rounded-xl bg-black border border-[#272727] space-y-3">
+              <div className="h-9 w-9 rounded-lg bg-[#181818] border border-[#272727] flex items-center justify-center text-white">
+                <BarChart3 className="h-5 w-5 text-emerald-400" />
               </div>
-              <h3 className="font-bold text-white text-sm">3. Cryptographic Proof</h3>
-              <p className="text-xs text-muted mt-2 leading-relaxed">
-                Host agent signs hardware telemetry with ed25519. Synthetic canaries verify bandwidth before tenant login.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-surface border border-border hover:border-primary/50 transition-all group">
-              <div className="h-10 w-10 rounded-lg bg-surfaceSubtle border border-border flex items-center justify-center text-blue-400 mb-4 group-hover:scale-105 transition-transform">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-white text-sm">4. Independent Index</h3>
-              <p className="text-xs text-muted mt-2 leading-relaxed">
-                Isolated trust domain publishes volume-weighted fixes. Enforces strict `insufficient_data` integrity gates.
+              <h3 className="font-bold text-base text-white">
+                Balanced double-entry subledger
+              </h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Escrow funds are isolated in a double-entry subledger where debits and credits strictly sum to zero. Regulated bank transfers and take-or-pay settlements protect both parties.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA SECTION */}
-      <section className="py-20 bg-surface/50">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
-            Ready to secure guaranteed compute capacity?
+      {/* 5. HOW IT WORKS (3 steps per landing-page-design A2) */}
+      <section className="py-24 border-b border-[#272727] bg-black">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              Execution Lifecycle
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              From Private Bilateral RFQ to Certified Delivery in 3 Steps
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
+            <div className="p-6 rounded-xl bg-[#121212] border border-[#272727] space-y-3">
+              <span className="text-xs text-zinc-500">STEP 01</span>
+              <h3 className="text-sm font-bold text-white font-sans">Submit RFQ & Lock Terms</h3>
+              <p className="text-zinc-400 font-sans leading-relaxed">
+                Buyer submits private request for designated hardware grade and window. Tier-1 suppliers quote competitive rates. Once matched, the bilateral confirmation generates a deterministic SHA-256 digest.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-[#121212] border border-[#272727] space-y-3">
+              <span className="text-xs text-zinc-500">STEP 02</span>
+              <h3 className="text-sm font-bold text-white font-sans">Automated Canary Verification</h3>
+              <p className="text-zinc-400 font-sans leading-relaxed">
+                At T-24h before delivery, host agent executes synthetic NCCL AllReduce and memory tests. The report is ed25519 signed and evaluated by our gateway against the 400 GB/s benchmark floor.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-[#121212] border border-[#272727] space-y-3">
+              <span className="text-xs text-zinc-500">STEP 03</span>
+              <h3 className="text-sm font-bold text-white font-sans">Handover & Escrow Settlement</h3>
+              <p className="text-zinc-400 font-sans leading-relaxed">
+                Passing canary unlocks access credentials for the buyer. Hardware runs continuously for the full 168-hour block. Subledger automatically settles escrow payout upon completion.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. STANDARDIZED BENCHMARK GRADE SPEC */}
+      <section id="grades" className="py-24 border-b border-[#272727] bg-[#121212]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              Standardized Physical Commodity
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Grade Specification: H100-SXM-8XNV
+            </h2>
+            <p className="text-sm text-zinc-400">
+              Like Light Sweet Crude on NYMEX or 5,000 Bushels on CBOT, compute requires a deterministic physical grade definition to establish forward liquidity.
+            </p>
+          </div>
+
+          <div className="p-8 rounded-xl bg-black border border-[#272727] max-w-4xl mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272727] pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">8x NVIDIA H100 SXM5 (80GB HBM3)</h3>
+                <p className="text-xs text-zinc-500 font-mono mt-0.5">GRADE IDENTIFIER: H100-SXM-8XNV</p>
+              </div>
+              <span className="text-xs font-mono px-3 py-1 rounded bg-emerald-950/50 border border-emerald-800 text-emerald-400 w-fit">
+                Benchmark Grade Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 block text-xs">VRAM POOL</span>
+                <span className="text-sm font-bold text-white mt-1 block">640 GB</span>
+                <span className="text-zinc-500 text-xs">HBM3 3.35 TB/s</span>
+              </div>
+              <div className="p-3 rounded-lg bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 block text-xs">NVLINK MESH</span>
+                <span className="text-sm font-bold text-white mt-1 block">900 GB/s</span>
+                <span className="text-zinc-500 text-xs">NVSwitch 4.0</span>
+              </div>
+              <div className="p-3 rounded-lg bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 block text-xs">SYSTEM HOST</span>
+                <span className="text-sm font-bold text-white mt-1 block">112 Cores</span>
+                <span className="text-zinc-500 text-xs">1,024 GB DDR5</span>
+              </div>
+              <div className="p-3 rounded-lg bg-[#121212] border border-[#272727]">
+                <span className="text-zinc-500 block text-xs">ALLREDUCE FLOOR</span>
+                <span className="text-sm font-bold text-emerald-400 mt-1 block">&ge; 400 GB/s</span>
+                <span className="text-zinc-500 text-xs">Synthetic Canary</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. INSTITUTIONAL FAQ (6 questions per landing-page-design A2 & A4) */}
+      <section className="py-24 border-b border-[#272727] bg-black">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center space-y-3">
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              Frequently Asked Questions
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Legal, Verification, and Settlement Clarity
+            </h2>
+          </div>
+
+          <div className="space-y-4 text-xs font-mono">
+            <div className="p-5 rounded-xl bg-[#121212] border border-[#272727] space-y-2">
+              <h3 className="text-sm font-bold text-white font-sans">
+                Why is Verinode structured as a physical forward rather than a derivative?
+              </h3>
+              <p className="text-zinc-400 font-sans text-xs leading-relaxed">
+                Under CFTC commodity regulations, physical forward contracts that result in actual physical delivery of commercial capacity are exempt from swap-dealer registration. Verinode facilitates take-or-pay capacity reservation for training runs, not retail cash-settled speculation.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#121212] border border-[#272727] space-y-2">
+              <h3 className="text-sm font-bold text-white font-sans">
+                How does the hardware canary test protect buyers?
+              </h3>
+              <p className="text-zinc-400 font-sans text-xs leading-relaxed">
+                Prior to delivery start, a cryptographic host agent runs synthetic NCCL AllReduce and memory tests. If the cluster suffers degraded NVLink topology (dropping below 400 GB/s) or unrecovered ECC errors, the supplier must cure or the contract cancels with a 100% escrow refund.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#121212] border border-[#272727] space-y-2">
+              <h3 className="text-sm font-bold text-white font-sans">
+                Does Verinode ever touch customer training data or model weights?
+              </h3>
+              <p className="text-zinc-400 font-sans text-xs leading-relaxed">
+                Never (Invariant 4). Our host agent probes hardware metrics only (PCI IDs, DCGM health, synthetic bandwidth). Customer workloads, weights, training code, and SSH sessions are completely isolated from our telemetry gateway.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#121212] border border-[#272727] space-y-2">
+              <h3 className="text-sm font-bold text-white font-sans">
+                How is collateral and payment escrow managed?
+              </h3>
+              <p className="text-zinc-400 font-sans text-xs leading-relaxed">
+                All transactions execute through our balanced double-entry subledger where credits and debits strictly balance to zero. Escrow deposits are held via institutional banking rails (Fedwire) with automatic payout to suppliers upon successful completion.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#121212] border border-[#272727] space-y-2">
+              <h3 className="text-sm font-bold text-white font-sans">
+                What role do Solana, Arbitrum, and Hyperliquid play?
+              </h3>
+              <p className="text-zinc-400 font-sans text-xs leading-relaxed">
+                Blockchains are optional Phase 4 public audit mirrors (Invariant 6). The off-chain PostgreSQL database and executed legal confirmations remain authoritative. We mirror state transitions and canary attestation proofs to Solana Devnet and Arbitrum Sepolia for public verification.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. FINAL CTA (Risk Reversal per landing-page-design A2 & A4) */}
+      <section className="py-24 bg-[#121212]">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Reserve Enterprise GPU Capacity with Legal Recourse
           </h2>
-          <p className="mt-4 text-sm text-muted max-w-xl mx-auto">
-            Join leading AI teams and GPU clouds using Verinode to trade standardized physical compute reservations.
+          <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
+            Eliminate spot preemption and opaque brokers. Execute standardized forward reservations backed by independent hardware telemetry proofs.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
+
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/buyer/rfqs/new"
-              className="px-6 py-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.98] shadow-sm"
             >
-              Submit an RFQ
+              <span>Submit Private RFQ</span>
+              <ArrowRight className="h-4 w-4 text-zinc-950" />
             </Link>
+
             <Link
               href="/seller"
-              className="px-6 py-3 rounded-lg bg-surface border border-border hover:border-borderHighlight text-white font-medium text-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-black hover:bg-[#181818] border border-[#272727] text-white font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.98]"
             >
-              Onboard as Supplier
+              <span>List Cluster Inventory</span>
             </Link>
           </div>
         </div>

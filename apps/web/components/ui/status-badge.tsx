@@ -37,11 +37,11 @@ export function StatusBadge({ state, className }: StatusBadgeProps) {
       break;
     case "delivery_test":
       badgeStyles = "bg-indigo-950/60 text-indigo-300 border-indigo-800/60";
-      dotStyles = "bg-indigo-400 animate-ping";
+      dotStyles = "bg-indigo-400";
       label = "Delivery Attestation / Canary";
       break;
     case "live":
-      badgeStyles = "bg-emerald-950/70 text-emerald-300 border-emerald-700/80 shadow-[0_0_12px_rgba(16,185,129,0.15)]";
+      badgeStyles = "bg-emerald-950/70 text-emerald-300 border-emerald-800";
       dotStyles = "bg-emerald-400";
       label = "Live Delivered Capacity";
       break;
