@@ -55,6 +55,55 @@ export interface TelemetryVerifyResponse {
   timestamp: string;
 }
 
+export interface IndexSeries {
+  id: string;
+  gpu_model: string;
+  form: string;
+  topology: string;
+  region_bucket: string;
+  tenor: string;
+  tenancy: string;
+  currency: string;
+  methodology_version: string;
+  min_contributors: number;
+  min_notional_usd: number;
+  max_contributor_weight: number;
+  created_at: string;
+}
+
+export interface IndexObservation {
+  id: string;
+  series_id: string;
+  value_usd?: number | null;
+  unit: string;
+  observation_window_start: string;
+  observation_window_end: string;
+  publish_time: string;
+  sequence_number: number;
+  contributor_count: number;
+  observation_count: number;
+  total_notional_usd: number;
+  confidence_interval_low?: number | null;
+  confidence_interval_high?: number | null;
+  insufficient_data: boolean;
+  reason?: string | null;
+  signature?: string | null;
+}
+
+export interface SurveillanceFlag {
+  id: string;
+  subject_type: "contract" | "contribution" | "participant";
+  subject_id: string;
+  flag_type: "wash_trade" | "related_party" | "concentration" | "spoofing" | "end_window_marking";
+  severity: "info" | "warning" | "critical";
+  details: Record<string, unknown>;
+  status: "pending" | "reviewed" | "dismissed" | "escalated";
+  reviewed_by?: string | null;
+  resolution?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+}
+
 export interface Participant {
   id?: string;
   legal_name: string;
@@ -323,5 +372,59 @@ export const api = {
       body: JSON.stringify(req),
     });
     return handleResponse<TelemetryVerifyResponse>(res);
+  },
+
+  // Phase 2: Index & Market Data Benchmarks
+  async listIndexSeries(): Promise<IndexSeries[]> {
+    const res = await fetch(`${API_BASE}/v1/index/series`, { cache: "no-store" });
+    const data = await handleResponse<{ series: IndexSeries[] }>(res);
+    return data.series || [];
+  },
+
+  async getIndexSeries(seriesId: string): Promise<IndexSeries> {
+    const res = await fetch(`${API_BASE}/v1/index/series/${seriesId}`, { cache: "no-store" });
+    return handleResponse<IndexSeries>(res);
+  },
+
+  async getLatestIndexObservation(seriesId: string): Promise<IndexObservation> {
+    const res = await fetch(`${API_BASE}/v1/index/series/${seriesId}/latest`, { cache: "no-store" });
+    return handleResponse<IndexObservation>(res);
+  },
+
+  async listIndexObservations(seriesId: string, limit: number = 30): Promise<IndexObservation[]> {
+    const res = await fetch(`${API_BASE}/v1/index/series/${seriesId}/observations?limit=${limit}`, { cache: "no-store" });
+    const data = await handleResponse<{ observations: IndexObservation[] }>(res);
+    return data.observations || [];
+  },
+
+  async publishIndexFix(seriesId: string, lookbackHours: number = 168): Promise<IndexObservation> {
+    const res = await fetch(`${API_BASE}/v1/internal/index/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ series_id: seriesId, lookback_hours: lookbackHours }),
+    });
+    return handleResponse<IndexObservation>(res);
+  },
+
+  // Surveillance Desk
+  async listSurveillanceFlags(status?: string): Promise<SurveillanceFlag[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    const res = await fetch(`${API_BASE}/v1/surveillance/flags${query}`, { cache: "no-store" });
+    const data = await handleResponse<{ flags: SurveillanceFlag[] }>(res);
+    return data.flags || [];
+  },
+
+  async reviewSurveillanceFlag(
+    flagId: string,
+    reviewer: string,
+    resolution: string,
+    status: "reviewed" | "dismissed" | "escalated"
+  ): Promise<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }> {
+    const res = await fetch(`${API_BASE}/v1/surveillance/flags/${flagId}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewer, resolution, status }),
+    });
+    return handleResponse<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }>(res);
   },
 };

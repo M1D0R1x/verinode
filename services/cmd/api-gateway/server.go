@@ -15,6 +15,7 @@ import (
 	"github.com/M1D0R1x/verinode/services/internal/contract"
 	"github.com/M1D0R1x/verinode/services/internal/inventory"
 	"github.com/M1D0R1x/verinode/services/internal/ledger"
+	"github.com/M1D0R1x/verinode/services/internal/marketdata"
 	"github.com/M1D0R1x/verinode/services/internal/participant"
 	"github.com/M1D0R1x/verinode/services/internal/rfq"
 	"github.com/M1D0R1x/verinode/services/internal/telemetry"
@@ -27,6 +28,8 @@ type Server struct {
 	contractRepo    *contract.Repository
 	ledgerRepo      *ledger.Repository
 	claimsRepo      *claims.Repository
+	marketRepo      *marketdata.Repository
+	calculator      *marketdata.Calculator
 	logger          *slog.Logger
 	handler         http.Handler
 }
@@ -38,6 +41,7 @@ func NewServer(
 	cRepo *contract.Repository,
 	lRepo *ledger.Repository,
 	claimRepo *claims.Repository,
+	mRepo *marketdata.Repository,
 	logger *slog.Logger,
 ) *Server {
 	if logger == nil {
@@ -51,6 +55,8 @@ func NewServer(
 		contractRepo:    cRepo,
 		ledgerRepo:      lRepo,
 		claimsRepo:      claimRepo,
+		marketRepo:      mRepo,
+		calculator:      marketdata.NewCalculator(nil),
 		logger:          logger,
 	}
 
@@ -105,6 +111,18 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/claims", s.handleListClaims)
 	mux.HandleFunc("POST /v1/claims", s.handleCreateClaim)
 	mux.HandleFunc("POST /v1/claims/{id}/resolve", s.handleResolveClaim)
+
+	// Phase 2: Index & Market Data Endpoints (Invariant 5)
+	mux.HandleFunc("GET /v1/index/series", s.handleListIndexSeries)
+	mux.HandleFunc("GET /v1/index/series/{seriesId}", s.handleGetIndexSeries)
+	mux.HandleFunc("GET /v1/index/series/{seriesId}/observations", s.handleListIndexObservations)
+	mux.HandleFunc("GET /v1/index/series/{seriesId}/latest", s.handleGetLatestIndexObservation)
+	mux.HandleFunc("POST /v1/internal/index/contribute", s.handleRecordIndexContribution)
+	mux.HandleFunc("POST /v1/internal/index/publish", s.handlePublishIndexFix)
+
+	// Surveillance & Anti-Manipulation
+	mux.HandleFunc("GET /v1/surveillance/flags", s.handleListSurveillanceFlags)
+	mux.HandleFunc("POST /v1/surveillance/flags/{id}/review", s.handleReviewSurveillanceFlag)
 }
 
 // -----------------------------------------------------------------------------
@@ -792,5 +810,261 @@ func (s *Server) handleResolveClaim(w http.ResponseWriter, r *http.Request) {
 		"claim_id":     claimID,
 		"state":        req.TargetState,
 		"resolved_at":  time.Now().UTC(),
+	})
+}
+
+// -----------------------------------------------------------------------------
+// Phase 2: Index & Market Data Handlers
+// -----------------------------------------------------------------------------
+
+func (s *Server) handleListIndexSeries(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	seriesList, err := s.marketRepo.ListSeries(r.Context())
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to list index series", err.Error())
+		return
+	}
+	if seriesList == nil {
+		seriesList = []marketdata.IndexSeries{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"series": seriesList,
+		"count":  len(seriesList),
+	})
+}
+
+func (s *Server) handleGetIndexSeries(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	seriesID := r.PathValue("seriesId")
+	series, err := s.marketRepo.GetSeries(r.Context(), seriesID)
+	if err != nil {
+		if errors.Is(err, marketdata.ErrSeriesNotFound) {
+			writeProblem(w, http.StatusNotFound, "Index Series Not Found", seriesID)
+			return
+		}
+		writeProblem(w, http.StatusInternalServerError, "Failed to query series", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(series)
+}
+
+func (s *Server) handleListIndexObservations(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	seriesID := r.PathValue("seriesId")
+	limit := 30
+	if lStr := r.URL.Query().Get("limit"); lStr != "" {
+		if parsed, err := strconv.Atoi(lStr); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	observations, err := s.marketRepo.ListObservations(r.Context(), seriesID, limit)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to query observations", err.Error())
+		return
+	}
+	if observations == nil {
+		observations = []marketdata.IndexObservation{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"series_id":    seriesID,
+		"observations": observations,
+		"count":        len(observations),
+	})
+}
+
+func (s *Server) handleGetLatestIndexObservation(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	seriesID := r.PathValue("seriesId")
+	obs, err := s.marketRepo.GetLatestObservation(r.Context(), seriesID)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to query latest observation", err.Error())
+		return
+	}
+	if obs == nil {
+		// Invariant 5: Return insufficient_data: true rather than 404 or fabricated data
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"series_id":         seriesID,
+			"insufficient_data": true,
+			"reason":            "No published fix available for series",
+			"publish_time":      time.Now().UTC(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(obs)
+}
+
+func (s *Server) handleRecordIndexContribution(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	var req marketdata.MarketContribution
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+
+	if req.SeriesID == "" || req.ContributorID == "" || req.HourlyPriceUSD <= 0 || req.DurationHours <= 0 {
+		writeProblem(w, http.StatusBadRequest, "Validation Error", "series_id, contributor_id, hourly_price_usd, and duration_hours must be positive")
+		return
+	}
+	if req.NotionalUSD == 0 {
+		req.NotionalUSD = req.HourlyPriceUSD * float64(req.DurationHours)
+	}
+
+	if err := s.marketRepo.RecordContribution(r.Context(), &req); err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to record contribution", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":          "accepted",
+		"contribution_id": req.ID,
+		"series_id":       req.SeriesID,
+		"notional_usd":    req.NotionalUSD,
+	})
+}
+
+func (s *Server) handlePublishIndexFix(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	var req struct {
+		SeriesID      string `json:"series_id"`
+		LookbackHours int    `json:"lookback_hours"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	if req.SeriesID == "" {
+		req.SeriesID = "H100-SXM-8XNV-US-WEEK-DEDICATED-USD"
+	}
+	if req.LookbackHours <= 0 {
+		req.LookbackHours = 168 // 7 days default
+	}
+
+	series, err := s.marketRepo.GetSeries(r.Context(), req.SeriesID)
+	if err != nil {
+		writeProblem(w, http.StatusNotFound, "Index Series Not Found", req.SeriesID)
+		return
+	}
+
+	since := time.Now().UTC().Add(-time.Duration(req.LookbackHours) * time.Hour)
+	contributions, err := s.marketRepo.ListContributions(r.Context(), req.SeriesID, since)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to list contributions", err.Error())
+		return
+	}
+
+	latest, _ := s.marketRepo.GetLatestObservation(r.Context(), req.SeriesID)
+	var nextSeq int64 = 1
+	if latest != nil {
+		nextSeq = latest.SequenceNumber + 1
+	}
+
+	obs := s.calculator.CalculateFix(series, contributions, since, time.Now().UTC(), nextSeq)
+
+	if err := s.marketRepo.RecordObservation(r.Context(), &obs); err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to persist index observation", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(obs)
+}
+
+func (s *Server) handleListSurveillanceFlags(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	status := r.URL.Query().Get("status")
+	flags, err := s.marketRepo.ListSurveillanceFlags(r.Context(), status)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Failed to list surveillance flags", err.Error())
+		return
+	}
+	if flags == nil {
+		flags = []marketdata.SurveillanceFlag{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"flags": flags,
+		"count": len(flags),
+	})
+}
+
+func (s *Server) handleReviewSurveillanceFlag(w http.ResponseWriter, r *http.Request) {
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+
+	flagID := r.PathValue("id")
+	var req struct {
+		Reviewer   string `json:"reviewer"`
+		Resolution string `json:"resolution"`
+		Status     string `json:"status"` // 'reviewed', 'dismissed', 'escalated'
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	if req.Reviewer == "" || req.Resolution == "" || req.Status == "" {
+		writeProblem(w, http.StatusBadRequest, "Validation Error", "reviewer, resolution, and status are required")
+		return
+	}
+
+	if err := s.marketRepo.ReviewSurveillanceFlag(r.Context(), flagID, req.Reviewer, req.Resolution, req.Status); err != nil {
+		if errors.Is(err, marketdata.ErrFlagNotFound) {
+			writeProblem(w, http.StatusNotFound, "Surveillance Flag Not Found", flagID)
+			return
+		}
+		writeProblem(w, http.StatusInternalServerError, "Failed to review surveillance flag", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":      "updated",
+		"flag_id":     flagID,
+		"reviewed_by": req.Reviewer,
+		"resolution":  req.Resolution,
+		"new_status":  req.Status,
 	})
 }

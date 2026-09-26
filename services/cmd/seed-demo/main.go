@@ -352,14 +352,75 @@ func main() {
 	`, contractID, evidenceJSON)
 	fmt.Printf("✓ Telemetry Canary Event: NCCL 405.2 GB/s pass recorded for contract %s\n", contractID)
 
+	// 10. Phase 2 Index Domain Seeding (Series, Contributions, and Signed Fix)
+	seriesID := "H100-SXM-8XNV-US-WEEK-DEDICATED-USD"
+	_, err = pool.Exec(ctx, `
+		INSERT INTO index_series (
+			id, gpu_model, form, topology, region_bucket, tenor, tenancy, currency,
+			methodology_version, min_contributors, min_notional_usd, max_contributor_weight
+		) VALUES (
+			$1, 'NVIDIA H100 SXM 80GB', '8x SXM HGX', 'NVLink 4.0 / NVSwitch', 'us-east',
+			'168h', 'dedicated', 'USD', 'v1.0.0-institutional', 3, 50000.0, 0.35
+		) ON CONFLICT (id) DO NOTHING;
+	`, seriesID)
+	if err != nil {
+		logger.Warn("Failed inserting index series", "error", err)
+	}
+
+	// Insert 3 independent contributions from Crusoe, Lambda, and CoreWeave
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO index_contributions (
+			series_id, tier, contract_id, hourly_price_usd, duration_hours, notional_usd, contributor_id
+		) VALUES 
+		($1, 'completed_trade', $2, 24.25, 168, 40740.0, $3),
+		($1, 'matched_trade_pending', NULL, 24.50, 168, 41160.0, $4),
+		($1, 'firm_two_sided_quote', NULL, 24.75, 168, 41580.0, $5);
+	`, seriesID, contractID, crusoeID, lambdaID, pendingKycID)
+
+	// Insert authoritative signed index observation
+	obsNow := time.Now().UTC()
+	windowStart := obsNow.Add(-168 * time.Hour)
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO index_observations (
+			series_id, value, unit, observation_window_start, observation_window_end,
+			publish_time, sequence_number, contributor_count, observation_count, total_notional_usd,
+			confidence_interval_low, confidence_interval_high, insufficient_data, signature
+		) VALUES (
+			$1, 24.50, 'USD_PER_NODE_HOUR', $2, $3,
+			$3, 1, 3, 3, 123480.0,
+			24.25, 24.75, FALSE,
+			'e4b78912cd34567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+		) ON CONFLICT (series_id, sequence_number) DO NOTHING;
+	`, seriesID, windowStart, obsNow)
+	fmt.Printf("✓ Phase 2 Index Series & Observation: %s fix published at $24.50/hr (3 contributors, $123k notional)\n", seriesID)
+
+	// 11. Phase 2 Surveillance Flag for Admin Review Desk
+	flagDetails, _ := json.Marshal(map[string]interface{}{
+		"contributor_legal_name": "Crusoe Energy Systems Inc",
+		"concentration_pct":      33.0,
+		"threshold_ceiling_pct":  35.0,
+		"rule_code":              "SURV-CONC-01",
+		"notes":                  "Crusoe weight represents 33.0% of observation window notional, within 200 bps of 35% concentration cap.",
+	})
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO surveillance_flags (
+			subject_type, subject_id, flag_type, severity, details, status
+		) VALUES (
+			'contract', $1, 'concentration', 'warning', $2, 'pending'
+		);
+	`, contractID, flagDetails)
+	fmt.Printf("✓ Surveillance Flag for Admin Review: concentration warning on contract %s\n", contractID)
+
 	fmt.Println("================================================================================")
 	fmt.Println("             SEEDING COMPLETE — ALL INVARIANTS SATISFIED                       ")
 	fmt.Println("================================================================================")
 	fmt.Println("\nQuick Navigation Links:")
-	fmt.Println(" • Buyer Portal:      http://localhost:3000/buyer")
-	fmt.Println(" • Seller Portal:     http://localhost:3000/seller")
-	fmt.Println(" • Admin Operations:  http://localhost:3000/admin")
-	fmt.Println(" • Admin KYC Desk:    http://localhost:3000/admin/participants")
-	fmt.Println(" • Admin Claims Desk: http://localhost:3000/admin/claims")
-	fmt.Printf(" • Trade Confirmation: http://localhost:3000/buyer/contracts/%s\n\n", contractID)
+	fmt.Println(" • Buyer Portal:        http://localhost:3000/buyer")
+	fmt.Println(" • Seller Portal:       http://localhost:3000/seller")
+	fmt.Println(" • Market Data Index:   http://localhost:3000/market-data")
+	fmt.Println(" • Admin Operations:    http://localhost:3000/admin")
+	fmt.Println(" • Admin KYC Desk:      http://localhost:3000/admin/participants")
+	fmt.Println(" • Admin Claims Desk:   http://localhost:3000/admin/claims")
+	fmt.Println(" • Admin Surveillance:  http://localhost:3000/admin/surveillance")
+	fmt.Printf(" • Trade Confirmation:   http://localhost:3000/buyer/contracts/%s\n\n", contractID)
 }

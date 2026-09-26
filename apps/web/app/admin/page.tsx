@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ShieldAlert, Users, FileText, Activity, ArrowRight, CheckCircle2, AlertTriangle, Layers } from "lucide-react";
-import { api, Participant } from "@/lib/api";
+import { ShieldAlert, Users, FileText, Activity, ArrowRight, CheckCircle2, AlertTriangle, Layers, Sliders } from "lucide-react";
+import { api, Participant, SurveillanceFlag } from "@/lib/api";
 import { Contract, Claim, ContractEvent } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -11,6 +11,7 @@ export default async function AdminDashboardPage() {
   let contracts: Contract[] = [];
   let claims: Claim[] = [];
   let auditEvents: ContractEvent[] = [];
+  let flags: SurveillanceFlag[] = [];
 
   try {
     participants = await api.listParticipants();
@@ -36,9 +37,16 @@ export default async function AdminDashboardPage() {
     // fallback
   }
 
+  try {
+    flags = await api.listSurveillanceFlags();
+  } catch {
+    // fallback
+  }
+
   const pendingKYC = participants.filter((p) => !p.kyc_status || p.kyc_status === "pending" || p.kyc_status === "review");
   const openClaims = claims.filter((c) => c.state === "claim_open");
   const liveContracts = contracts.filter((c) => c.state === "live" || c.state === "delivery_test");
+  const pendingFlags = flags.filter((f) => f.status === "pending");
 
   return (
     <div className="space-y-8">
@@ -111,7 +119,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Main Action Desks */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link
           href="/admin/participants"
           className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
@@ -154,6 +162,29 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="mt-6 flex items-center text-xs font-medium text-danger gap-1">
             <span>Manage {openClaims.length} Claims</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/surveillance"
+          className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
+        >
+          <div className="space-y-3">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Sliders className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
+                Surveillance & Anti-Wash Desk
+              </h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Anti-manipulation wash trade filters, concentration ceiling guards, and IOSCO benchmark review queues.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex items-center text-xs font-medium text-amber-400 gap-1">
+            <span>Review {pendingFlags.length} Alerts</span>
             <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </Link>

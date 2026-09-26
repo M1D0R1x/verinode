@@ -15,7 +15,7 @@ import (
 )
 
 func setupTestServer() http.Handler {
-	return NewServer(nil, nil, nil, nil, nil, nil, nil)
+	return NewServer(nil, nil, nil, nil, nil, nil, nil, nil)
 }
 
 func TestHealthCheckEndpoint(t *testing.T) {

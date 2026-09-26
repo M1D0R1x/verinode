@@ -13,7 +13,7 @@ export function Header() {
     { name: "Buyer Portal", href: "/buyer" },
     { name: "Seller Portal", href: "/seller" },
     { name: "Admin Console", href: "/admin" },
-    { name: "Index & Data", href: "/#index" },
+    { name: "Benchmark Index", href: "/market-data" },
   ];
 
   return (
