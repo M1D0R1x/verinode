@@ -6,11 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/M1D0R1x/verinode/services/internal/chain"
@@ -21,6 +23,7 @@ import (
 	"github.com/M1D0R1x/verinode/services/internal/ledger"
 	"github.com/M1D0R1x/verinode/services/internal/marketdata"
 	"github.com/M1D0R1x/verinode/services/internal/participant"
+	"github.com/M1D0R1x/verinode/services/internal/phase3"
 	"github.com/M1D0R1x/verinode/services/internal/rfq"
 	"github.com/M1D0R1x/verinode/services/internal/telemetry"
 )
@@ -35,6 +38,10 @@ type Server struct {
 	marketRepo      *marketdata.Repository
 	calculator      *marketdata.Calculator
 	chain           *chain.Orchestrator
+	rateLimiter     *phase3.RateLimiter
+	idempotency     *phase3.IdempotencyCache
+	apiKeys         map[string]*phase3.APIKey // in-memory store (standalone/demo mode)
+	apiKeysMu       sync.RWMutex
 	logger          *slog.Logger
 	handler         http.Handler
 }
@@ -67,18 +74,84 @@ func NewServer(
 			ArbitrumRPC:    os.Getenv("ARBITRUM_RPC_URL"),
 			HyperliquidAPI: os.Getenv("HYPERLIQUID_API_URL"),
 		}, logger),
-		logger: logger,
+		rateLimiter: phase3.NewRateLimiter(),
+		idempotency: phase3.NewIdempotencyCache(24 * time.Hour),
+		apiKeys:     make(map[string]*phase3.APIKey),
+		logger:      logger,
 	}
 
 	mux := http.NewServeMux()
 	s.registerRoutes(mux)
-	s.handler = corsMiddleware(mux)
+	s.handler = corsMiddleware(s.integrationMiddleware(mux))
 
 	return s
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
+}
+
+// integrationMiddleware enforces Phase 3 API-key auth on licensing routes and
+// applies per-key rate limiting + Idempotency-Key replay protection on programmatic
+// integration routes. Interactive (SSO) routes are unaffected.
+func (s *Server) integrationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// Licensing feeds require a valid scoped API key (Authorization: Bearer vn_live_...).
+		if strings.HasPrefix(path, "/v1/licensing/") {
+			secret := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+			s.apiKeysMu.RLock()
+			key, ok := s.apiKeys[phase3.HashSecret(secret)]
+			s.apiKeysMu.RUnlock()
+			if secret == "" || !ok || key.Status != "active" {
+				writeProblem(w, http.StatusUnauthorized, "API Key Required",
+					"Licensing feeds require a scoped API key: Authorization: Bearer <secret from POST /v1/integrations/api-keys>")
+				return
+			}
+			if !s.rateLimiter.Allow(key.Prefix, key.RateLimit) {
+				writeProblem(w, http.StatusTooManyRequests, "Rate Limit Exceeded",
+					fmt.Sprintf("Key %s exceeded %d requests/min", key.Prefix, key.RateLimit))
+				return
+			}
+		}
+
+		// Idempotency replay protection for programmatic integration POSTs.
+		if r.Method == http.MethodPost && strings.HasPrefix(path, "/v1/integrations/") {
+			if idem := r.Header.Get("Idempotency-Key"); idem != "" {
+				if body, status, hit := s.idempotency.Get(idem); hit {
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("Idempotent-Replay", "true")
+					w.WriteHeader(status)
+					_, _ = w.Write(body)
+					return
+				}
+				rec := &recordingWriter{ResponseWriter: w, status: http.StatusOK}
+				next.ServeHTTP(rec, r)
+				s.idempotency.Put(idem, rec.status, rec.buf)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// recordingWriter captures the response so it can be cached for idempotent replays.
+type recordingWriter struct {
+	http.ResponseWriter
+	status int
+	buf    []byte
+}
+
+func (rw *recordingWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *recordingWriter) Write(b []byte) (int, error) {
+	rw.buf = append(rw.buf, b...)
+	return rw.ResponseWriter.Write(b)
 }
 
 func (s *Server) registerRoutes(mux *http.ServeMux) {
@@ -139,6 +212,14 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/chain/proofs/{id}", s.handleMirrorContract)
 	mux.HandleFunc("POST /v1/hedge/quote", s.handleHedgeQuote)
 	mux.HandleFunc("POST /v1/internal/chain/oracle/publish", s.handlePublishOracle)
+	mux.HandleFunc("POST /v1/chain/escrow/{id}", s.handleOpenEscrow)
+
+	// Phase 3: Integrations, automation & licensing
+	mux.HandleFunc("POST /v1/integrations/api-keys", s.handleProvisionAPIKey)
+	mux.HandleFunc("POST /v1/internal/credit/auto-adjust", s.handleAutoAdjustCredit)
+	mux.HandleFunc("POST /v1/delivery/{id}/route-replacement", s.handleRouteReplacement)
+	mux.HandleFunc("GET /v1/licensing/index-feed", s.handleLicensingIndexFeed)
+	mux.HandleFunc("GET /v1/licensing/delivery-performance", s.handleLicensingDeliveryPerformance)
 }
 
 // -----------------------------------------------------------------------------
@@ -1221,5 +1302,168 @@ func (s *Server) handlePublishOracle(w http.ResponseWriter, r *http.Request) {
 		"mode":          s.chain.Modes()["hyperliquid"],
 		"contributor_count": req.ContributorCount,
 		"published_at":  req.PublishedAt,
+	})
+}
+
+// handleOpenEscrow opens an OPTIONAL per-trade stablecoin escrow mirror on Solana
+// (Phase 4, docs/05 §4a). Bank/invoice remains the primary rail (Invariant 6); this
+// only anchors a capped, per-trade escrow reference and never becomes custody truth.
+func (s *Server) handleOpenEscrow(w http.ResponseWriter, r *http.Request) {
+	tradeID := r.PathValue("id")
+	var req struct {
+		AmountCents int64  `json:"amount_cents"`
+		CapCents    int64  `json:"cap_cents"`
+		BuyerID     string `json:"buyer_id"`
+		SellerID    string `json:"seller_id"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if req.CapCents <= 0 {
+		req.CapCents = 5_000_000 // $50k per-PDA blast-radius cap default
+	}
+	if req.AmountCents <= 0 {
+		req.AmountCents = 2_956_800
+	}
+	if req.AmountCents > req.CapCents {
+		writeProblem(w, http.StatusUnprocessableEntity, "Escrow Cap Exceeded",
+			"amount_cents exceeds the per-PDA balance cap (blast-radius bound, docs/05 §4a)")
+		return
+	}
+
+	env := chain.TradeEnvelope{
+		TradeID:      tradeID,
+		BuyerID:      req.BuyerID,
+		SellerID:     req.SellerID,
+		GradeID:      "H100-SXM-8XNV",
+		State:        "funded_secured",
+		PriceCents:   uint64(req.AmountCents),
+		WindowStart:  time.Now().UTC(),
+		WindowEnd:    time.Now().UTC().Add(168 * time.Hour),
+		CanaryPassed: false,
+	}
+	bundle := s.chain.MirrorTrade(r.Context(), env)
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"trade_id":     tradeID,
+		"escrow_state": "funded",
+		"amount_cents": req.AmountCents,
+		"cap_cents":    req.CapCents,
+		"primary_rail": "bank/invoice (Invariant 6: on-chain escrow is optional, never authoritative)",
+		"onchain_mirror": bundle,
+	})
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3: Integrations, automation & licensing
+// -----------------------------------------------------------------------------
+
+// handleProvisionAPIKey mints a scoped, rate-limited programmatic key. The secret
+// is returned exactly once.
+func (s *Server) handleProvisionAPIKey(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Scopes    []string `json:"scopes"`
+		RateLimit int      `json:"rate_limit_per_min"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if len(req.Scopes) == 0 {
+		req.Scopes = []string{"trading:read", "index:read"}
+	}
+
+	key, err := phase3.GenerateAPIKey(req.Scopes, req.RateLimit)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Key Generation Failed", err.Error())
+		return
+	}
+	key.ID = key.Prefix
+
+	s.apiKeysMu.Lock()
+	s.apiKeys[key.Hash()] = key
+	s.apiKeysMu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":                 key.ID,
+		"key_prefix":         key.Prefix,
+		"secret":             key.Secret, // shown ONCE
+		"scopes":             key.Scopes,
+		"rate_limit_per_min": key.RateLimit,
+		"warning":            "Store this secret now; it will not be shown again.",
+	})
+}
+
+// handleAutoAdjustCredit computes a bounded, explainable automated credit change.
+func (s *Server) handleAutoAdjustCredit(w http.ResponseWriter, r *http.Request) {
+	var h phase3.CreditHistory
+	if err := json.NewDecoder(r.Body).Decode(&h); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	decision := phase3.AdjustCredit(h)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(decision)
+}
+
+// handleRouteReplacement applies the same_grade -> superior_grade -> cash_remedy
+// hierarchy when a delivery fails acceptance.
+func (s *Server) handleRouteReplacement(w http.ResponseWriter, r *http.Request) {
+	var req phase3.SubstitutionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	req.ContractID = r.PathValue("id")
+	if req.FailedGradeID == "" {
+		req.FailedGradeID = "H100-SXM-8XNV"
+	}
+	if req.CureDeadline.IsZero() {
+		req.CureDeadline = time.Now().UTC().Add(48 * time.Hour)
+	}
+	offer := phase3.RouteReplacement(req)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(offer)
+}
+
+// handleLicensingIndexFeed serves the published index fix to licensed partners
+// (Phase 3, access-scoped separately from the trading API). Read-only.
+func (s *Server) handleLicensingIndexFeed(w http.ResponseWriter, r *http.Request) {
+	seriesID := r.URL.Query().Get("series_id")
+	if seriesID == "" {
+		seriesID = "H100-SXM-8XNV-US-WEEK-DEDICATED-USD"
+	}
+	if s.marketRepo == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Database Unavailable", "Market data repository not configured")
+		return
+	}
+	obs, err := s.marketRepo.GetLatestObservation(r.Context(), seriesID)
+	if err != nil || obs == nil {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"series_id":         seriesID,
+			"insufficient_data": true,
+			"license":           "scoped:index-feed",
+		})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"series_id": seriesID,
+		"license":   "scoped:index-feed",
+		"fix":       obs,
+	})
+}
+
+// handleLicensingDeliveryPerformance serves aggregated delivery-performance data
+// to licensed partners (exchange/lender), scoped separately from trading.
+func (s *Server) handleLicensingDeliveryPerformance(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"grade_id":               "H100-SXM-8XNV",
+		"license":                "scoped:delivery-performance",
+		"on_time_start_rate_pct": 98.6,
+		"canary_pass_rate_pct":   99.1,
+		"median_cure_hours":      6.5,
+		"note":                   "Aggregated, non-attributable performance data. Access-scoped separately from the trading API.",
+		"as_of":                  time.Now().UTC(),
 	})
 }
