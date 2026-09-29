@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Inter, JetBrains_Mono } from "next/font/google";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const serif = Newsreader({
@@ -44,9 +45,11 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-screen bg-ink-950 text-parchment antialiased flex flex-col font-sans"
       >
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

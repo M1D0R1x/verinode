@@ -2,6 +2,16 @@ import { Claim, ConfirmationDocument, Contract, ContractEvent, ContractState, De
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// Bearer token attached to every request when present (set by the auth layer).
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const h: Record<string, string> = { ...(extra || {}) };
+  if (typeof window !== "undefined") {
+    const t = window.localStorage.getItem("vn_token");
+    if (t) h["Authorization"] = `Bearer ${t}`;
+  }
+  return h;
+}
+
 export interface GatewayHealth {
   status: string;
   service: string;
@@ -183,7 +193,7 @@ export const api = {
   },
 
   async listParticipants(): Promise<Participant[]> {
-    const res = await fetch(`${API_BASE}/v1/participants`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/participants`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Participant[]>(res);
   },
 
@@ -191,7 +201,7 @@ export const api = {
   async createInventoryBlock(b: InventoryBlock): Promise<InventoryBlock> {
     const res = await fetch(`${API_BASE}/v1/inventory/blocks`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(b),
     });
     return handleResponse<InventoryBlock>(res);
@@ -218,7 +228,7 @@ export const api = {
   }): Promise<RFQ> {
     const res = await fetch(`${API_BASE}/v1/rfqs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(req),
     });
     return handleResponse<RFQ>(res);
@@ -242,7 +252,7 @@ export const api = {
   ): Promise<Quote> {
     const res = await fetch(`${API_BASE}/v1/rfqs/${rfqId}/quotes`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(q),
     });
     return handleResponse<Quote>(res);
@@ -260,7 +270,7 @@ export const api = {
   ): Promise<{ status: string; contract_id: string; contract: Contract }> {
     const res = await fetch(`${API_BASE}/v1/rfqs/${rfqId}/quotes/${quoteId}/accept`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ buyer_id: buyerId }),
     });
     return handleResponse<{ status: string; contract_id: string; contract: Contract }>(res);
@@ -293,7 +303,7 @@ export const api = {
   },
 
   async listContracts(): Promise<Contract[]> {
-    const res = await fetch(`${API_BASE}/v1/contracts`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/contracts`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Contract[]>(res);
   },
 
@@ -309,7 +319,7 @@ export const api = {
 
   // Admin & Compliance
   async listAdminAudit(limit: number = 100): Promise<ContractEvent[]> {
-    const res = await fetch(`${API_BASE}/v1/admin/audit?limit=${limit}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/admin/audit?limit=${limit}`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<ContractEvent[]>(res);
   },
 
@@ -320,7 +330,7 @@ export const api = {
   ): Promise<Participant> {
     const res = await fetch(`${API_BASE}/v1/participants/${id}/kyc`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ kyc_status, credit_limit_cents }),
     });
     return handleResponse<Participant>(res);
@@ -329,7 +339,7 @@ export const api = {
   // SLA Claims
   async listClaims(state?: string): Promise<Claim[]> {
     const url = state ? `${API_BASE}/v1/claims?state=${encodeURIComponent(state)}` : `${API_BASE}/v1/claims`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Claim[]>(res);
   },
 
@@ -352,7 +362,7 @@ export const api = {
   ): Promise<{ claim_id: string; state: string; resolved_at: string }> {
     const res = await fetch(`${API_BASE}/v1/claims/${claimId}/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ target_state: targetState }),
     });
     return handleResponse<{ claim_id: string; state: string; resolved_at: string }>(res);
@@ -417,7 +427,7 @@ export const api = {
   // Surveillance Desk
   async listSurveillanceFlags(status?: string): Promise<SurveillanceFlag[]> {
     const query = status ? `?status=${encodeURIComponent(status)}` : "";
-    const res = await fetch(`${API_BASE}/v1/surveillance/flags${query}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/surveillance/flags${query}`, { cache: "no-store", headers: authHeaders() });
     const data = await handleResponse<{ flags: SurveillanceFlag[] }>(res);
     return data.flags || [];
   },
@@ -430,7 +440,7 @@ export const api = {
   ): Promise<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }> {
     const res = await fetch(`${API_BASE}/v1/surveillance/flags/${flagId}/review`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ reviewer, resolution, status }),
     });
     return handleResponse<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }>(res);

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { api, AuthUser } from "@/lib/api";
 
 const TOKEN_KEY = "vn_token";
@@ -22,9 +29,17 @@ export interface AuthState {
   login: (email: string, password: string) => Promise<AuthUser>;
   register: (company: string, email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  refresh: () => Promise<void>;
 }
 
-export function useAuth(): AuthState {
+const AuthContext = createContext<AuthState | null>(null);
+
+/**
+ * AuthProvider hydrates the current user ONCE at mount from the stored token, so
+ * every consumer shares one resolved state — no per-component /me race that forced
+ * repeated refreshes after login.
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +62,6 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     refresh();
-    // Reflect logins/logouts happening in other tabs.
     const onStorage = (e: StorageEvent) => {
       if (e.key === TOKEN_KEY) refresh();
     };
@@ -59,6 +73,7 @@ export function useAuth(): AuthState {
     const session = await api.login(email, password);
     setToken(session.token);
     setUser(session.user);
+    setLoading(false);
     return session.user;
   }, []);
 
@@ -66,6 +81,7 @@ export function useAuth(): AuthState {
     const session = await api.register(company, email, password);
     setToken(session.token);
     setUser(session.user);
+    setLoading(false);
     return session.user;
   }, []);
 
@@ -74,5 +90,17 @@ export function useAuth(): AuthState {
     setUser(null);
   }, []);
 
-  return { user, loading, login, register, logout };
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within <AuthProvider>");
+  }
+  return ctx;
 }

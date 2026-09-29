@@ -121,6 +121,23 @@ func (s *Server) integrationMiddleware(next http.Handler) http.Handler {
 			r = r.WithContext(auth.WithClaims(r.Context(), claims))
 		}
 
+		// Trading writes require an authenticated principal with trading rights
+		// (super_admin / company_admin / trader). This stops anonymous RFQ/quote/listing.
+		if s.isTradingWrite(r.Method, path) {
+			claims, err := s.tokens.Authenticate(r)
+			if err != nil {
+				writeProblem(w, http.StatusUnauthorized, "Authentication Required",
+					"Sign in to submit RFQs, quotes or listings.")
+				return
+			}
+			if !claims.Role.CanWriteTrading() {
+				writeProblem(w, http.StatusForbidden, "Forbidden",
+					"Your role is read-only. A trader or company_admin can submit this.")
+				return
+			}
+			r = r.WithContext(auth.WithClaims(r.Context(), claims))
+		}
+
 		// Licensing feeds require a valid scoped API key (Authorization: Bearer vn_live_...).
 		if strings.HasPrefix(path, "/v1/licensing/") {
 			secret := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -197,9 +214,23 @@ func (s *Server) isPlatformPrivileged(method, path string) bool {
 	}
 }
 
-// -----------------------------------------------------------------------------
-// Auth handlers
-// -----------------------------------------------------------------------------
+// isTradingWrite reports whether a request creates trading state (RFQ, quote, listing).
+// These require an authenticated principal so anonymous users cannot request/list.
+func (s *Server) isTradingWrite(method, path string) bool {
+	if method != http.MethodPost {
+		return false
+	}
+	switch {
+	case path == "/v1/rfqs":
+		return true
+	case strings.HasPrefix(path, "/v1/rfqs/") && strings.Contains(path, "/quotes"):
+		return true // create quote and accept quote
+	case path == "/v1/inventory/blocks":
+		return true
+	default:
+		return false
+	}
+}
 
 func (s *Server) issueSession(w http.ResponseWriter, u *auth.User) {
 	tok, _ := s.tokens.Mint(u.ID, u.Email, u.Role, u.CompanyID)

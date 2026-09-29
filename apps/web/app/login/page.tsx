@@ -30,7 +30,13 @@ export default function LoginPage() {
     setErr(null);
     try {
       const user = mode === "login" ? await login(email, password) : await register(company, email, password);
-      router.push(user.is_platform_staff ? "/admin" : "/buyer");
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      if (next && next.startsWith("/")) {
+        router.push(next);
+      } else {
+        router.push(user.is_platform_staff ? "/admin" : "/buyer");
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message.replace(/^\[\d+\]\s*/, "") : "Authentication failed");
     } finally {
