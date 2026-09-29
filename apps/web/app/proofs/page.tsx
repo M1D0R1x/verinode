@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { api, ChainStatus, ProofBundle } from "@/lib/api";
 import { ArrowUpRight, Loader2, ShieldCheck, Link2, Copy, Check } from "lucide-react";
 
-const CHAIN_META: Record<string, { label: string; cluster: string; tone: string }> = {
-  solana: { label: "Solana", cluster: "devnet", tone: "text-signal" },
-  arbitrum: { label: "Arbitrum", cluster: "sepolia", tone: "text-parchment" },
-  hyperliquid: { label: "Hyperliquid", cluster: "testnet", tone: "text-verify" },
+const CHAIN_META: Record<string, { label: string; cluster: string; role: string; tone: string }> = {
+  solana: { label: "Solana", cluster: "devnet", role: "Settlement & proof anchor", tone: "text-signal" },
+  arbitrum: { label: "Arbitrum", cluster: "sepolia", role: "Enterprise contract registry", tone: "text-parchment" },
+  hyperliquid: { label: "Hyperliquid", cluster: "testnet", role: "Basis hedging venue", tone: "text-verify" },
 };
 
 function ModePill({ mode }: { mode: string }) {
@@ -71,9 +71,11 @@ export default function ProofsPage() {
       <p className="eyebrow">Phase 4 · optional on-chain audit</p>
       <h1 className="mt-3 font-serif text-headline text-parchment">On-chain proof mirror</h1>
       <p className="mt-4 max-w-2xl text-muted">
-        The off-chain PostgreSQL record and signed legal confirmation are authoritative.
-        These rails anchor a tamper-evident mirror of each canonical trade&apos;s state and
-        canary attestation so anyone can verify it independently — never a second source of truth.
+        Verinode&apos;s chain layer has three distinct roles: <span className="text-signal">Solana</span> anchors
+        settlement and canary-attestation proofs, <span className="text-parchment">Arbitrum</span> registers
+        enterprise contract state, and <span className="text-verify">Hyperliquid</span> is the basis-hedging
+        venue. The off-chain PostgreSQL record and signed legal confirmation stay authoritative — chains carry
+        verifiable mirrors, never a second source of truth.
       </p>
 
       {/* Rail status */}
@@ -85,13 +87,15 @@ export default function ProofsPage() {
                   <span className={`font-serif text-lg ${CHAIN_META[c].tone}`}>{CHAIN_META[c].label}</span>
                   <ModePill mode={status.modes[c]} />
                 </div>
-                <div className="tabular mt-2 text-xs text-muted-soft">{status.clusters[c]}</div>
+                <div className="mt-2 text-xs text-parchment">{CHAIN_META[c].role}</div>
+                <div className="tabular mt-1 text-xs text-muted-soft">{status.clusters[c]}</div>
               </div>
             ))
           : (["solana", "arbitrum", "hyperliquid"] as const).map((c) => (
               <div key={c} className="card p-5 opacity-60">
                 <span className={`font-serif text-lg ${CHAIN_META[c].tone}`}>{CHAIN_META[c].label}</span>
-                <div className="tabular mt-2 text-xs text-muted-soft">gateway offline</div>
+                <div className="mt-2 text-xs text-parchment">{CHAIN_META[c].role}</div>
+                <div className="tabular mt-1 text-xs text-muted-soft">gateway offline</div>
               </div>
             ))}
       </div>

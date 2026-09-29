@@ -136,20 +136,28 @@ export class VerinodeApiError extends Error {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let errorJson: { title?: string; detail?: string } = {};
+  // Read the body once as text so we can tolerate empty (204) and non-JSON payloads
+  // without throwing "Unexpected end of JSON input".
+  const raw = await res.text();
+  let parsed: unknown = undefined;
+  if (raw) {
     try {
-      errorJson = await res.json();
+      parsed = JSON.parse(raw);
     } catch {
-      // ignore
+      parsed = undefined; // non-JSON body (e.g. a proxy error page)
     }
+  }
+
+  if (!res.ok) {
+    const err = (parsed ?? {}) as { title?: string; detail?: string };
     throw new VerinodeApiError(
       res.status,
-      errorJson.title || res.statusText,
-      errorJson.detail || "An unexpected error occurred contacting API gateway"
+      err.title || res.statusText || "Request failed",
+      err.detail || raw || "An unexpected error occurred contacting the API gateway"
     );
   }
-  return res.json() as Promise<T>;
+
+  return (parsed ?? ({} as T)) as T;
 }
 
 export const api = {

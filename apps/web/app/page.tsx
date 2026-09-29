@@ -99,7 +99,7 @@ const faqs = [
   },
   {
     q: "What do Solana, Arbitrum and Hyperliquid do here?",
-    a: "They are optional, read-only Phase-4 mirrors. The off-chain PostgreSQL record and the signed legal confirmation remain authoritative. Solana anchors a verifiable proof of each canary attestation and state transition; Hyperliquid is only ever a basis-hedge venue for a mature index — never the settlement rail.",
+    a: "Each has a distinct job. Solana anchors settlement and a verifiable proof of every canary attestation and state transition. Arbitrum registers enterprise contract state for counterparties that require EVM-native records. Hyperliquid is the basis-hedging venue where a fixed-price forward can be offset against the floating GPU-hour index. The off-chain PostgreSQL record and signed legal confirmation remain authoritative — the chains carry verifiable mirrors, never a second source of truth.",
   },
 ];
 
@@ -124,10 +124,11 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-              Verinode is an institutional desk for physically delivered GPU-capacity
-              forward reservations. Standardized bilateral contracts, independent
-              cryptographic canary verification, and balanced double-entry escrow —
-              so a cluster booked eight weeks out is one you can hold your supplier to.
+              Verinode is an institutional desk for GPU compute sold spot and forward —
+              buyers lock price, sellers lock revenue. Standardized bilateral contracts,
+              independent cryptographic canary verification, and balanced double-entry
+              escrow settled on Solana, so a cluster booked eight weeks out is one you can
+              hold your supplier to.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">

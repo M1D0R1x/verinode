@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/M1D0R1x/verinode/services/internal/claims"
@@ -38,11 +39,41 @@ func writeProblem(w http.ResponseWriter, status int, title, detail string) {
 	})
 }
 
+// allowedOrigins is the CORS allowlist. Credentialed requests (cookies) forbid the
+// wildcard origin, so we reflect a specific allowlisted origin instead. Override via
+// CORS_ALLOWED_ORIGINS (comma-separated) in other environments.
+func allowedOrigins() map[string]bool {
+	raw := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if raw == "" {
+		raw = "http://localhost:3000,http://127.0.0.1:3000"
+	}
+	m := make(map[string]bool)
+	for _, o := range strings.Split(raw, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			m[o] = true
+		}
+	}
+	return m
+}
+
+var corsAllowlist = allowedOrigins()
+
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		// Reflect an allowlisted origin (required: cannot use "*" with credentials).
+		if origin != "" && corsAllowlist[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Vary", "Origin")
+		} else if origin == "" {
+			// Non-browser / same-origin callers (curl, server-to-server): permissive,
+			// but WITHOUT credentials so no cookie is ever exposed cross-origin.
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Idempotency-Key")
+		w.Header().Set("Access-Control-Max-Age", "600")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

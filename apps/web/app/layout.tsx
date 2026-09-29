@@ -40,7 +40,10 @@ export default function RootLayout({
       lang="en"
       className={`dark ${serif.variable} ${sans.variable} ${mono.variable}`}
     >
-      <body className="min-h-screen bg-ink-950 text-parchment antialiased flex flex-col font-sans">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-ink-950 text-parchment antialiased flex flex-col font-sans"
+      >
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
