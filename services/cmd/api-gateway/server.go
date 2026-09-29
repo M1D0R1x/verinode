@@ -18,6 +18,7 @@ import (
 	"github.com/M1D0R1x/verinode/services/internal/chain"
 	"github.com/M1D0R1x/verinode/services/internal/claims"
 	"github.com/M1D0R1x/verinode/services/internal/contract"
+	"github.com/M1D0R1x/verinode/services/internal/auth"
 	"github.com/M1D0R1x/verinode/services/internal/hyperliquid"
 	"github.com/M1D0R1x/verinode/services/internal/inventory"
 	"github.com/M1D0R1x/verinode/services/internal/ledger"
@@ -42,6 +43,8 @@ type Server struct {
 	idempotency     *phase3.IdempotencyCache
 	apiKeys         map[string]*phase3.APIKey // in-memory store (standalone/demo mode)
 	apiKeysMu       sync.RWMutex
+	tokens          *auth.TokenService
+	users           *auth.Store
 	logger          *slog.Logger
 	handler         http.Handler
 }
@@ -77,6 +80,8 @@ func NewServer(
 		rateLimiter: phase3.NewRateLimiter(),
 		idempotency: phase3.NewIdempotencyCache(24 * time.Hour),
 		apiKeys:     make(map[string]*phase3.APIKey),
+		tokens:      auth.NewTokenService(os.Getenv("AUTH_JWT_SECRET"), 12*time.Hour),
+		users:       auth.NewStore(),
 		logger:      logger,
 	}
 
@@ -97,6 +102,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) integrationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
+
+		// RBAC: platform-privileged surfaces require platform staff (super_admin/admin).
+		// Company principals never reach the platform console — surveillance,
+		// participant approval and cross-company audit are platform trust-domain functions.
+		if s.isPlatformPrivileged(r.Method, path) {
+			claims, err := s.tokens.Authenticate(r)
+			if err != nil {
+				writeProblem(w, http.StatusUnauthorized, "Authentication Required",
+					"This is a platform console endpoint. Log in as platform staff (super_admin/admin).")
+				return
+			}
+			if !claims.Role.IsPlatformStaff() {
+				writeProblem(w, http.StatusForbidden, "Forbidden",
+					"Platform console is restricted to super_admin and admin. Registered companies use their scoped org view.")
+				return
+			}
+			r = r.WithContext(auth.WithClaims(r.Context(), claims))
+		}
 
 		// Licensing feeds require a valid scoped API key (Authorization: Bearer vn_live_...).
 		if strings.HasPrefix(path, "/v1/licensing/") {
@@ -154,10 +177,124 @@ func (rw *recordingWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
+// isPlatformPrivileged reports whether a request targets a platform-staff-only surface.
+// These are the compliance/ops trust-domain endpoints; company principals must never reach them.
+func (s *Server) isPlatformPrivileged(method, path string) bool {
+	switch {
+	case strings.HasPrefix(path, "/v1/admin/"):
+		return true
+	case strings.HasPrefix(path, "/v1/surveillance/"):
+		return true
+	case strings.HasPrefix(path, "/v1/internal/"):
+		return true
+	// Compliance sets KYC / credit limits — platform staff only.
+	case method == http.MethodPatch && strings.HasPrefix(path, "/v1/participants/") && strings.Contains(path, "/kyc"):
+		return true
+	case method == http.MethodPost && strings.HasPrefix(path, "/v1/participants/") && strings.Contains(path, "/kyc"):
+		return true
+	default:
+		return false
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Auth handlers
+// -----------------------------------------------------------------------------
+
+func (s *Server) issueSession(w http.ResponseWriter, u *auth.User) {
+	tok, _ := s.tokens.Mint(u.ID, u.Email, u.Role, u.CompanyID)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "vn_session",
+		Value:    tok,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   12 * 3600,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"token": tok,
+		"user": map[string]interface{}{
+			"id":           u.ID,
+			"email":        u.Email,
+			"role":         u.Role,
+			"company_id":   u.CompanyID,
+			"company_name": u.CompanyName,
+			"is_platform_staff": u.Role.IsPlatformStaff(),
+		},
+	})
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	u, err := s.users.Authenticate(req.Email, req.Password)
+	if err != nil {
+		writeProblem(w, http.StatusUnauthorized, "Invalid Credentials", "Email or password is incorrect.")
+		return
+	}
+	s.issueSession(w, u)
+}
+
+func (s *Server) handleRegisterCompany(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		CompanyName string `json:"company_name"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+		return
+	}
+	u, err := s.users.RegisterCompany(req.CompanyName, req.Email, req.Password)
+	if err != nil {
+		writeProblem(w, http.StatusUnprocessableEntity, "Registration Failed",
+			"Provide a company name, a unique email, and a password of at least 8 characters.")
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	s.issueSession(w, u)
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	claims, err := s.tokens.Authenticate(r)
+	if err != nil {
+		writeProblem(w, http.StatusUnauthorized, "Not Authenticated", "No valid session.")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":                claims.Subject,
+		"email":             claims.Email,
+		"role":              claims.Role,
+		"company_id":        claims.CompanyID,
+		"is_platform_staff": claims.Role.IsPlatformStaff(),
+		"can_write_trading": claims.Role.CanWriteTrading(),
+	})
+}
+
+// handleDemoCredentials surfaces the seeded logins for the demo (dev convenience).
+func (s *Server) handleDemoCredentials(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"credentials": s.users.SeededCredentials()})
+}
+
 func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Health & Benchmark Grades
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	mux.HandleFunc("GET /v1/grades", s.handleGetGrades)
+
+	// Authentication & RBAC
+	mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /v1/auth/register", s.handleRegisterCompany)
+	mux.HandleFunc("GET /v1/auth/me", s.handleMe)
+	mux.HandleFunc("GET /v1/auth/demo-credentials", s.handleDemoCredentials)
 
 	// Participant Endpoints
 	mux.HandleFunc("POST /v1/participants", s.handleCreateParticipant)

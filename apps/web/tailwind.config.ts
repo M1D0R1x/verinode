@@ -51,6 +51,30 @@ const config: Config = {
         muted: {
           DEFAULT: "#9AA0AD",
           soft: "#6B7180",
+          foreground: "#6B7180",
+        },
+
+        // ---------------------------------------------------------------
+        // Legacy token aliases — mapped onto the new palette so existing
+        // portal pages keep rendering with correct contrast. Prefer the
+        // ink-*/signal/verify/parchment tokens above in new code.
+        // ---------------------------------------------------------------
+        background: "#0A0B0E",
+        foreground: "#EDE7DA",
+        surface: "#151821",
+        surfaceSubtle: "#1B1F29",
+        card: "#151821",
+        border: "#20242E",
+        borderHighlight: "#252A36",
+        primary: {
+          DEFAULT: "#E5A94E",
+          hover: "#F2C078",
+          foreground: "#0A0B0E",
+        },
+        accent: {
+          DEFAULT: "#4ADE9B",
+          hover: "#0F9D6B",
+          foreground: "#0A0B0E",
         },
       },
       fontFamily: {
