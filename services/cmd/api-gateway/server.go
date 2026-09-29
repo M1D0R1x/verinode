@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/base64"
@@ -30,13 +31,13 @@ import (
 )
 
 type Server struct {
-	participantRepo *participant.Repository
-	inventoryRepo   *inventory.Repository
-	rfqRepo         *rfq.Repository
-	contractRepo    *contract.Repository
+	participantRepo ParticipantStore
+	inventoryRepo   InventoryStore
+	rfqRepo         RFQStore
+	contractRepo    ContractStore
 	ledgerRepo      *ledger.Repository
-	claimsRepo      *claims.Repository
-	marketRepo      *marketdata.Repository
+	claimsRepo      ClaimsStore
+	marketRepo      MarketStore
 	calculator      *marketdata.Calculator
 	chain           *chain.Orchestrator
 	rateLimiter     *phase3.RateLimiter
@@ -49,14 +50,65 @@ type Server struct {
 	handler         http.Handler
 }
 
+// Store interfaces let the gateway run on either the pgx repositories (production)
+// or the in-memory repositories (no-DB demo mode) — both satisfy these method sets.
+type ParticipantStore interface {
+	Create(ctx context.Context, p *participant.Participant) error
+	GetByID(ctx context.Context, id string) (*participant.Participant, error)
+	List(ctx context.Context) ([]participant.Participant, error)
+	UpdateKYC(ctx context.Context, id, status string, creditLimitCents *int64) error
+}
+
+type InventoryStore interface {
+	Create(ctx context.Context, b *inventory.InventoryBlock) error
+	GetByID(ctx context.Context, id string) (*inventory.InventoryBlock, error)
+	FindAvailableBlocks(ctx context.Context, gradeID, regionBucket string, start, end time.Time) ([]inventory.InventoryBlock, error)
+}
+
+type RFQStore interface {
+	CreateRFQ(ctx context.Context, req *rfq.RFQ) error
+	GetRFQByID(ctx context.Context, id string) (*rfq.RFQ, error)
+	CreateQuote(ctx context.Context, q *rfq.Quote) error
+	GetQuotesByRFQ(ctx context.Context, rfqID string) ([]rfq.Quote, error)
+	AcceptQuote(ctx context.Context, quoteID, buyerID string) (*rfq.AcceptedQuoteDetails, error)
+}
+
+type ContractStore interface {
+	CreateContract(ctx context.Context, c *contract.ContractRecord) error
+	GetByID(ctx context.Context, tradeID string) (*contract.ContractRecord, error)
+	AdvanceContractState(ctx context.Context, tradeID string, nextState contract.State, evt contract.TransitionEvent) error
+	ListContracts(ctx context.Context) ([]contract.ContractRecord, error)
+	GetContractEvents(ctx context.Context, tradeID string) ([]contract.ContractEventRecord, error)
+	ListAllEvents(ctx context.Context, limit int) ([]contract.ContractEventRecord, error)
+	UpdateSignedPDFHash(ctx context.Context, tradeID, hash, ref string) error
+}
+
+type ClaimsStore interface {
+	Create(ctx context.Context, c *claims.Claim) error
+	List(ctx context.Context, stateFilter string) ([]claims.Claim, error)
+	Resolve(ctx context.Context, claimID, targetState string) error
+}
+
+type MarketStore interface {
+	GetSeries(ctx context.Context, id string) (*marketdata.IndexSeries, error)
+	ListSeries(ctx context.Context) ([]marketdata.IndexSeries, error)
+	GetLatestObservation(ctx context.Context, seriesID string) (*marketdata.IndexObservation, error)
+	ListObservations(ctx context.Context, seriesID string, limit int) ([]marketdata.IndexObservation, error)
+	RecordObservation(ctx context.Context, obs *marketdata.IndexObservation) error
+	RecordContribution(ctx context.Context, c *marketdata.MarketContribution) error
+	ListContributions(ctx context.Context, seriesID string, since time.Time) ([]marketdata.MarketContribution, error)
+	ListSurveillanceFlags(ctx context.Context, status string) ([]marketdata.SurveillanceFlag, error)
+	ReviewSurveillanceFlag(ctx context.Context, id, reviewer, resolution, newStatus string) error
+}
+
 func NewServer(
-	pRepo *participant.Repository,
-	iRepo *inventory.Repository,
-	rRepo *rfq.Repository,
-	cRepo *contract.Repository,
+	pRepo ParticipantStore,
+	iRepo InventoryStore,
+	rRepo RFQStore,
+	cRepo ContractStore,
 	lRepo *ledger.Repository,
-	claimRepo *claims.Repository,
-	mRepo *marketdata.Repository,
+	claimRepo ClaimsStore,
+	mRepo MarketStore,
 	logger *slog.Logger,
 ) *Server {
 	if logger == nil {

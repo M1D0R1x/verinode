@@ -16,6 +16,7 @@ import (
 	"github.com/M1D0R1x/verinode/services/internal/inventory"
 	"github.com/M1D0R1x/verinode/services/internal/ledger"
 	"github.com/M1D0R1x/verinode/services/internal/marketdata"
+	"github.com/M1D0R1x/verinode/services/internal/memrepo"
 	"github.com/M1D0R1x/verinode/services/internal/participant"
 	"github.com/M1D0R1x/verinode/services/internal/rfq"
 )
@@ -92,23 +93,24 @@ func main() {
 	}
 
 	var (
-		pRepo      *participant.Repository
-		iRepo      *inventory.Repository
-		rRepo      *rfq.Repository
-		cRepo      *contract.Repository
+		pRepo      ParticipantStore
+		iRepo      InventoryStore
+		rRepo      RFQStore
+		cRepo      ContractStore
 		lRepo      *ledger.Repository
-		claimRepo  *claims.Repository
-		marketRepo *marketdata.Repository
+		claimRepo  ClaimsStore
+		marketRepo MarketStore
 	)
 
 	dbCfg := db.DefaultConfig()
+	connected := false
 	if dbCfg.ConnString != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		pool, err := db.Connect(ctx, dbCfg, logger)
 		cancel()
 
 		if err != nil {
-			logger.Warn("Failed to connect to PostgreSQL database; running with limited endpoints", "error", err)
+			logger.Warn("Failed to connect to PostgreSQL; falling back to in-memory store", "error", err)
 		} else {
 			defer pool.Close()
 			pRepo = participant.NewRepository(pool.Pool)
@@ -118,10 +120,21 @@ func main() {
 			lRepo = ledger.NewRepository(pool.Pool)
 			claimRepo = claims.NewRepository(pool.Pool)
 			marketRepo = marketdata.NewRepository(pool.Pool)
-			logger.Info("All database domain repositories connected successfully")
+			connected = true
+			logger.Info("All database domain repositories connected (PostgreSQL)")
 		}
-	} else {
-		logger.Warn("DATABASE_URL not configured; running in standalone mode")
+	}
+
+	if !connected {
+		// No database configured or reachable — run fully on seeded in-memory
+		// repositories so every screen and API works with zero infrastructure.
+		pRepo = memrepo.NewParticipantRepo()
+		iRepo = memrepo.NewInventoryRepo()
+		rRepo = memrepo.NewRFQRepo()
+		cRepo = memrepo.NewContractRepo()
+		claimRepo = memrepo.NewClaimsRepo()
+		marketRepo = memrepo.NewMarketRepo()
+		logger.Warn("Running with the IN-MEMORY store (no DATABASE_URL). Data is seeded and non-persistent.")
 	}
 
 	srv := NewServer(pRepo, iRepo, rRepo, cRepo, lRepo, claimRepo, marketRepo, logger)
