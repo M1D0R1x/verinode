@@ -28,3 +28,14 @@ Solana is the headline chain: must produce real, clickable devnet transactions.
 
 ## Progress log
 - 2026-09-29: baseline verified; plan written; starting Solana devnet JS mirror + toolchain probe.
+- 2026-09-29: WS1-3 done — real pure-Go Solana devnet client (ed25519+RPC+Memo+base58),
+  chain.Orchestrator, gateway /v1/chain/* + /v1/hedge/* endpoints. Arb+HL mode-aware. All green.
+- 2026-09-29: WS4 done — phase3 (API keys, rate limit, idempotency, auto-credit, replacement
+  routing), integration middleware, licensing feeds. Migration 0004. All green + smoke-tested.
+- 2026-09-29: WS5 done — Phase 4 escrow endpoint with per-PDA caps; oracle publish (Inv5 gated).
+- 2026-09-29: WS6 done — full frontend redesign (warm-ink + signal-gold + serif system),
+  new /proofs and /hedge pages, palette remap. tsc + next build green; tokens verified in HTML.
+- 2026-09-29: WS7 in progress — devnet-prove harness (live-capable, faucet 429 = funding only),
+  solana-mirror surfaces real mode, .env.example chain vars, docs/DEMO.md judge quickstart.
+  OPEN: fund signer AoEQk3CuVSe1ZPLAoCiCcuXzsQVG7kD6NGFZTztbxzsf for a captured live tx.
+

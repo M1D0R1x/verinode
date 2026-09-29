@@ -122,3 +122,7 @@ k6-results/
 target/
 packages/solana/target/
 
+
+# Local devnet signer secret (never commit)
+services/.devnet-keypair.hex
+.devnet-keypair.hex

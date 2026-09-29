@@ -112,8 +112,14 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("3. Mirrored Canonical Trade State to Solana Devnet:\n")
+	fmt.Printf("   • Adapter Mode       : %s\n", adapter.Mode())
+	fmt.Printf("   • Signer Pubkey      : %s\n", adapter.SignerPubkey())
 	fmt.Printf("   • Transaction Sig    : %s\n", txEnvelopeSig)
-	fmt.Printf("   • Devnet Explorer    : https://explorer.solana.com/tx/%s?cluster=devnet\n\n", txEnvelopeSig)
+	if url := solana.ExplorerURL(txEnvelopeSig, "devnet"); url != "" {
+		fmt.Printf("   • Devnet Explorer    : %s\n\n", url)
+	} else {
+		fmt.Printf("   • Devnet Explorer    : (simulated — set SOLANA_SETTLEMENT_KEYPAIR + fund it for a live tx)\n\n")
+	}
 
 	// 4. Mirror Cryptographic Canary Attestation Proof
 	var digest [32]byte
@@ -130,7 +136,11 @@ func main() {
 	fmt.Printf("   • NCCL AllReduce     : %d GB/s (Floor: >= 400 GB/s PASS)\n", ncclGbps)
 	fmt.Printf("   • Canary Result      : VERIFIED\n")
 	fmt.Printf("   • Attestation Sig    : %s\n", txAttestationSig)
-	fmt.Printf("   • Devnet Explorer    : https://explorer.solana.com/tx/%s?cluster=devnet\n\n", txAttestationSig)
+	if url := solana.ExplorerURL(txAttestationSig, "devnet"); url != "" {
+		fmt.Printf("   • Devnet Explorer    : %s\n\n", url)
+	} else {
+		fmt.Printf("   • Devnet Explorer    : (simulated proof)\n\n")
+	}
 
 	fmt.Println("================================================================================")
 	fmt.Println("        SOLANA DEVNET MIRROR SUCCESSFUL — INVARIANT 6 PRESERVED                ")
