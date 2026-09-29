@@ -65,6 +65,7 @@ func main() {
 		"migrations/000001_init_schema.up.sql",
 		"migrations/000002_seed_initial_grade.up.sql",
 		"migrations/000003_index_and_surveillance.up.sql",
+		"migrations/000004_phase3_phase4.up.sql",
 	}
 
 	// Try relative or standard root path

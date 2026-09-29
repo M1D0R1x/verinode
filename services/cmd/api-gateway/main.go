@@ -29,6 +29,37 @@ type ProblemDetails struct {
 	TraceID string `json:"trace_id,omitempty"`
 }
 
+// loadDotEnv loads KEY=VALUE lines from candidate env files WITHOUT overriding
+// variables already present in the process environment. Dependency-free. This is why
+// running the gateway from anywhere picks up services/.env (e.g. the Neon DATABASE_URL)
+// with no shell export step.
+func loadDotEnv() {
+	for _, path := range []string{".env", "services/.env", "../.env", "../../.env"} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			eq := strings.IndexByte(line, '=')
+			if eq <= 0 {
+				continue
+			}
+			key := strings.TrimSpace(line[:eq])
+			val := strings.TrimSpace(line[eq+1:])
+			if len(val) >= 2 && (val[0] == '"' || val[0] == '\'') && val[len(val)-1] == val[0] {
+				val = val[1 : len(val)-1]
+			}
+			if _, exists := os.LookupEnv(key); !exists {
+				_ = os.Setenv(key, val)
+			}
+		}
+	}
+}
+
 func writeProblem(w http.ResponseWriter, status int, title, detail string) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
@@ -84,6 +115,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	loadDotEnv()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
