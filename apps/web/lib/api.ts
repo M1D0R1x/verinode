@@ -427,4 +427,71 @@ export const api = {
     });
     return handleResponse<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }>(res);
   },
+
+  // Phase 4: On-chain audit mirrors (Solana / Arbitrum) + Hyperliquid hedge (Invariant 6)
+  async getChainStatus(): Promise<ChainStatus> {
+    const res = await fetch(`${API_BASE}/v1/chain/status`, { cache: "no-store" });
+    return handleResponse<ChainStatus>(res);
+  },
+
+  async mirrorContract(tradeId: string): Promise<ProofBundle> {
+    const res = await fetch(`${API_BASE}/v1/chain/proofs/${tradeId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    return handleResponse<ProofBundle>(res);
+  },
+
+  async hedgeQuote(req: {
+    duration_hours: number;
+    gpu_count: number;
+    fixed_rate_hourly: number;
+    index_mark_price?: number;
+    series_id?: string;
+  }): Promise<HedgeQuote> {
+    const res = await fetch(`${API_BASE}/v1/hedge/quote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+    return handleResponse<HedgeQuote>(res);
+  },
 };
+
+export interface ChainStatus {
+  modes: { solana: string; arbitrum: string; hyperliquid: string };
+  authority: string;
+  clusters: { solana: string; arbitrum: string; hyperliquid: string };
+  timestamp: string;
+}
+
+export interface RailProof {
+  chain: string;
+  mode: string;
+  state_tx?: string;
+  attestation_tx?: string;
+  explorer_url?: string;
+  reference?: string;
+  error?: string;
+}
+
+export interface ProofBundle {
+  trade_id: string;
+  mirrored_at: string;
+  rails: RailProof[];
+  note: string;
+}
+
+export interface HedgeQuote {
+  total_gpu_hours: number;
+  physical_contract_usd: number;
+  floating_index_usd: number;
+  basis_spread_usd: number;
+  basis_spread_pct: number;
+  annualized_basis_pct: number;
+  recommended_action: string;
+  recommended_size_contracts: number;
+  rationale: string;
+  market: string;
+}

@@ -74,11 +74,11 @@ export default async function MarketDataPage() {
   const basisSpreadBps = (((fixPrice - hypPerpMark) / hypPerpMark) * 10000).toFixed(0);
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ink-950 text-white px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         
         {/* Breadcrumb & Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272727] pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20242E] pb-6">
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-xs font-mono text-emerald-400 mb-2">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -94,12 +94,12 @@ export default async function MarketDataPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-3 py-1.5 rounded-md border border-[#272727] bg-[#121212] text-xs font-mono text-zinc-400">
+            <span className="px-3 py-1.5 rounded-md border border-[#20242E] bg-[#101217] text-xs font-mono text-zinc-400">
               METHODOLOGY: <strong className="text-zinc-200">v1.0.0-INSTITUTIONAL</strong>
             </span>
             <Link
               href="/admin/surveillance"
-              className="px-3 py-1.5 rounded-md border border-[#272727] bg-[#181818] hover:bg-[#222222] text-xs font-medium text-zinc-300 transition-colors active:scale-[0.98]"
+              className="px-3 py-1.5 rounded-md border border-[#20242E] bg-[#151821] hover:bg-[#222222] text-xs font-medium text-zinc-300 transition-colors active:scale-[0.98]"
             >
               Surveillance Desk →
             </Link>
@@ -107,9 +107,9 @@ export default async function MarketDataPage() {
         </div>
 
         {/* Series Selector & Status Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#272727] bg-[#121212] p-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#20242E] bg-[#101217] p-4 text-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#181818] border border-[#272727]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#151821] border border-[#20242E]">
               <Cpu className="h-4 w-4 text-white" />
             </div>
             <div>
@@ -142,8 +142,8 @@ export default async function MarketDataPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Primary Benchmark Fix Card */}
-          <div className="lg:col-span-2 rounded-xl border border-[#272727] bg-[#121212] p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-[#272727] pb-4">
+          <div className="lg:col-span-2 rounded-xl border border-[#20242E] bg-[#101217] p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-[#20242E] pb-4">
               <div>
                 <span className="text-xs font-mono text-zinc-500 tracking-wider uppercase">Authoritative Price Fix</span>
                 <div className="flex items-baseline gap-3 mt-1">
@@ -167,7 +167,7 @@ export default async function MarketDataPage() {
 
             {/* Sub-Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-[#272727] bg-[#181818] p-4">
+              <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4">
                 <span className="text-xs font-mono text-zinc-500">PER-GPU HOURLY</span>
                 <div className="text-xl font-bold font-mono text-white mt-1">
                   ${perGpuPrice} <span className="text-xs text-zinc-400">/ GPU-h</span>
@@ -175,7 +175,7 @@ export default async function MarketDataPage() {
                 <span className="text-xs text-zinc-500 mt-1 block">8x SXM HGX breakdown</span>
               </div>
 
-              <div className="rounded-lg border border-[#272727] bg-[#181818] p-4">
+              <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4">
                 <span className="text-xs font-mono text-zinc-500">168H CONTRACT TOTAL</span>
                 <div className="text-xl font-bold font-mono text-white mt-1">
                   ${Number(weeklyNotional).toLocaleString()} <span className="text-xs text-zinc-400">USD</span>
@@ -183,7 +183,7 @@ export default async function MarketDataPage() {
                 <span className="text-xs text-zinc-500 mt-1 block">Standard 1-week block</span>
               </div>
 
-              <div className="rounded-lg border border-[#272727] bg-[#181818] p-4">
+              <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4">
                 <span className="text-xs font-mono text-zinc-500">DISPERSION CORRIDOR (P25 - P75)</span>
                 <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
                   ${p25.toFixed(2)} – ${p75.toFixed(2)}
@@ -193,7 +193,7 @@ export default async function MarketDataPage() {
             </div>
 
             {/* Invariant 5 Liquidity & Concentration Guards */}
-            <div className="rounded-lg border border-[#272727] bg-black p-5 space-y-4">
+            <div className="rounded-lg border border-[#20242E] bg-ink-950 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -230,7 +230,7 @@ export default async function MarketDataPage() {
             </div>
 
             {/* Cryptographic Signature Box */}
-            <div className="flex items-center justify-between rounded-lg border border-[#272727] bg-[#181818] p-3 text-xs font-mono">
+            <div className="flex items-center justify-between rounded-lg border border-[#20242E] bg-[#151821] p-3 text-xs font-mono">
               <div className="flex items-center gap-2 truncate">
                 <Lock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                 <span className="text-zinc-500 shrink-0">CANONICAL ED25519 SIGNATURE:</span>
@@ -243,9 +243,9 @@ export default async function MarketDataPage() {
           </div>
 
           {/* Basis Spread & Hedging Desk Card */}
-          <div className="rounded-xl border border-[#272727] bg-[#121212] p-6 space-y-6 flex flex-col justify-between">
+          <div className="rounded-xl border border-[#20242E] bg-[#101217] p-6 space-y-6 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#272727] pb-3">
+              <div className="flex items-center justify-between border-b border-[#20242E] pb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-white" />
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">Physical-to-Perp Basis</h3>
@@ -257,7 +257,7 @@ export default async function MarketDataPage() {
                 Basis spread between Verinode&apos;s physical take-or-pay forward benchmark and synthetic floating GPU perpetuals.
               </p>
 
-              <div className="rounded-lg border border-[#272727] bg-[#181818] p-4 space-y-3">
+              <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-500 font-mono">PHYSICAL FIX (VERINODE)</span>
                   <span className="font-mono font-bold text-white">${fixPrice.toFixed(2)}/h</span>
@@ -266,7 +266,7 @@ export default async function MarketDataPage() {
                   <span className="text-zinc-500 font-mono">SYNTHETIC PERP MARK (HIP-3)</span>
                   <span className="font-mono text-zinc-300">${hypPerpMark.toFixed(2)}/h</span>
                 </div>
-                <div className="border-t border-[#272727] pt-2 flex items-center justify-between">
+                <div className="border-t border-[#20242E] pt-2 flex items-center justify-between">
                   <span className="text-xs font-mono text-zinc-400 font-medium">BASIS SPREAD</span>
                   <span className="text-sm font-mono font-bold text-emerald-400">+{basisSpreadBps} bps</span>
                 </div>
@@ -285,7 +285,7 @@ export default async function MarketDataPage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#272727] text-xs text-zinc-500 flex items-center justify-between">
+            <div className="pt-4 border-t border-[#20242E] text-xs text-zinc-500 flex items-center justify-between">
               <span>Oracle Feed: HIP-3 Active</span>
               <Link 
                 href="https://app.hyperliquid.xyz" 
@@ -300,37 +300,37 @@ export default async function MarketDataPage() {
         </div>
 
         {/* Methodology & Specifications Table */}
-        <div className="rounded-xl border border-[#272727] bg-[#121212] p-6 space-y-6">
-          <div className="flex items-center justify-between border-b border-[#272727] pb-4">
+        <div className="rounded-xl border border-[#20242E] bg-[#101217] p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-[#20242E] pb-4">
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Benchmark Specification & Invariant Bounds</h2>
               <p className="text-xs text-zinc-400 mt-1">Rulebook governance parameters for canonical fix publication.</p>
             </div>
-            <span className="text-xs font-mono px-2.5 py-1 rounded bg-[#181818] border border-[#272727] text-zinc-400">
+            <span className="text-xs font-mono px-2.5 py-1 rounded bg-[#151821] border border-[#20242E] text-zinc-400">
               IOSCO PRINCIPLES COMPLIANT
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
-            <div className="rounded-lg border border-[#272727] bg-[#181818] p-4 space-y-1">
+            <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4 space-y-1">
               <span className="text-zinc-500">INPUT HIERARCHY TIER</span>
               <div className="text-sm font-semibold text-white">Tier 1: Completed Trades (1.0x)</div>
               <p className="text-zinc-500 text-xs">Firm quotes weighted 0.5x, indicative 0.25x</p>
             </div>
 
-            <div className="rounded-lg border border-[#272727] bg-[#181818] p-4 space-y-1">
+            <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4 space-y-1">
               <span className="text-zinc-500">HARDWARE FLOOR</span>
               <div className="text-sm font-semibold text-emerald-400">NCCL ≥ 400 GB/s</div>
               <p className="text-zinc-500 text-xs">Telemetry verified before trade entry</p>
             </div>
 
-            <div className="rounded-lg border border-[#272727] bg-[#181818] p-4 space-y-1">
+            <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4 space-y-1">
               <span className="text-zinc-500">ANTI-WASH SURVEILLANCE</span>
               <div className="text-sm font-semibold text-white">Cluster Filtering Active</div>
               <p className="text-zinc-500 text-xs">Related-party trades automatically excluded</p>
             </div>
 
-            <div className="rounded-lg border border-[#272727] bg-[#181818] p-4 space-y-1">
+            <div className="rounded-lg border border-[#20242E] bg-[#151821] p-4 space-y-1">
               <span className="text-zinc-500">DATA INTEGRITY INVARIANT</span>
               <div className="text-sm font-semibold text-white">Strict Fallback</div>
               <p className="text-zinc-500 text-xs">insufficient_data: true when unmet</p>
@@ -339,8 +339,8 @@ export default async function MarketDataPage() {
         </div>
 
         {/* Historical Fixes Table */}
-        <div className="rounded-xl border border-[#272727] bg-[#121212] p-6 space-y-6">
-          <div className="flex items-center justify-between border-b border-[#272727] pb-4">
+        <div className="rounded-xl border border-[#20242E] bg-[#101217] p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-[#20242E] pb-4">
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Recent Benchmark Publications</h2>
               <p className="text-xs text-zinc-400 mt-1">Immutable observation record for series {seriesId}.</p>
@@ -350,7 +350,7 @@ export default async function MarketDataPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="border-b border-[#272727] text-zinc-500">
+                <tr className="border-b border-[#20242E] text-zinc-500">
                   <th className="pb-3 font-normal">SEQ</th>
                   <th className="pb-3 font-normal">PUBLISHED AT</th>
                   <th className="pb-3 font-normal">FIX PRICE</th>
@@ -362,10 +362,10 @@ export default async function MarketDataPage() {
                   <th className="pb-3 font-normal text-right">SIGNATURE</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#272727] text-zinc-300">
+              <tbody className="divide-y divide-[#20242E] text-zinc-300">
                 {history.length > 0 ? (
                   history.map((obs) => (
-                    <tr key={obs.id} className="hover:bg-[#181818] transition-colors">
+                    <tr key={obs.id} className="hover:bg-[#151821] transition-colors">
                       <td className="py-3 text-zinc-400">#{obs.sequence_number}</td>
                       <td className="py-3 text-zinc-400">{new Date(obs.publish_time).toLocaleString()}</td>
                       <td className="py-3 font-bold text-white">
@@ -394,7 +394,7 @@ export default async function MarketDataPage() {
                     </tr>
                   ))
                 ) : (
-                  <tr className="hover:bg-[#181818] transition-colors">
+                  <tr className="hover:bg-[#151821] transition-colors">
                     <td className="py-3 text-zinc-400">#1</td>
                     <td className="py-3 text-zinc-400">{new Date().toLocaleString()}</td>
                     <td className="py-3 font-bold text-white">$24.50</td>

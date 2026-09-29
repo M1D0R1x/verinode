@@ -4,49 +4,92 @@
 
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
+    --background: #0a0b0e;
+    --foreground: #ede7da;
   }
 
   * {
-    border-color: #272727;
+    border-color: #20242e;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
-    background-color: #000000;
-    color: #EDEDED;
-    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+    background-color: #0a0b0e;
+    color: #ede7da;
+    font-family: var(--font-sans), system-ui, sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Subtle warm vignette so the base isn't a flat void. */
+    background-image:
+      radial-gradient(1200px 600px at 50% -10%, rgba(229, 169, 78, 0.05), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(74, 222, 155, 0.03), transparent 55%);
+    background-attachment: fixed;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3, h4 {
     text-wrap: balance;
+    font-family: var(--font-serif), Georgia, serif;
+    font-weight: 500;
   }
 
   p {
     text-wrap: pretty;
   }
+
+  /* Numeric/tabular data reads as a terminal only where it should. */
+  .tabular {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
 }
 
-/* Custom subtle institutional scrollbar */
+@layer components {
+  /* Reusable elevated card surface. */
+  .card {
+    background-color: #151821;
+    border: 1px solid #20242e;
+    border-radius: 14px;
+  }
+  .card-raise {
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset,
+      0 12px 40px -12px rgba(0, 0, 0, 0.6);
+  }
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #9aa0ad;
+  }
+  /* Hairline divider with a warm fade. */
+  .rule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #20242e 15%, #20242e 85%, transparent);
+  }
+}
+
+/* Warm institutional scrollbar. */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #0a0b0e;
 }
 ::-webkit-scrollbar-thumb {
-  background: #272727;
-  border-radius: 2px;
+  background: #252a36;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #383838;
+  background: #333a48;
 }
 
-/* Emil Kowalski Button Active State */
-button:active, a[role="button"]:active {
-  transform: scale(0.98);
+::selection {
+  background: rgba(229, 169, 78, 0.25);
+  color: #ede7da;
 }

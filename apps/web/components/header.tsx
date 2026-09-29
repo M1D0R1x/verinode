@@ -2,51 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, Cpu, ArrowUpRight } from "lucide-react";
+import { ShieldCheck, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const navItems = [
+  { name: "Buyer", href: "/buyer" },
+  { name: "Seller", href: "/seller" },
+  { name: "Index", href: "/market-data" },
+  { name: "Chain Proofs", href: "/proofs" },
+  { name: "Hedge Desk", href: "/hedge" },
+  { name: "Admin", href: "/admin" },
+];
 
 export function Header() {
   const pathname = usePathname();
 
-  const navItems = [
-    { name: "Grades & Specs", href: "/#grades" },
-    { name: "Buyer Portal", href: "/buyer" },
-    { name: "Seller Portal", href: "/seller" },
-    { name: "Admin Console", href: "/admin" },
-    { name: "Benchmark Index", href: "/market-data" },
-  ];
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#272727] bg-black/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand */}
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#181818] border border-[#272727] group-hover:border-zinc-500 transition-colors duration-150 ease-out">
-              <Cpu className="h-4 w-4 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-white">VERINODE</span>
-                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              </div>
-              <span className="text-xs font-mono tracking-wider text-zinc-500 uppercase">Physical Compute</span>
-            </div>
+    <header className="sticky top-0 z-50 w-full border-b border-line bg-ink-950/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-9">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-signal text-ink-950 shadow-glow">
+              <span className="font-serif text-lg font-semibold leading-none">V</span>
+            </span>
+            <span className="font-serif text-lg tracking-tight text-parchment">Verinode</span>
           </Link>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-150 ease-out",
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     isActive
-                      ? "text-white bg-[#181818] border border-[#272727]"
-                      : "text-zinc-400 hover:text-white hover:bg-[#121212]"
+                      ? "bg-ink-850 text-parchment"
+                      : "text-muted hover:bg-ink-900 hover:text-parchment"
                   )}
                 >
                   {item.name}
@@ -56,19 +51,17 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Action CTAs */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border border-[#272727] bg-[#121212] text-xs font-mono text-zinc-400">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Physical Delivery Guard</span>
-          </div>
-
+          <span className="hidden items-center gap-2 rounded-pill border border-line bg-ink-900 px-3 py-1 text-xs text-muted lg:inline-flex">
+            <ShieldCheck className="h-3.5 w-3.5 text-signal" />
+            Physical forward exclusion
+          </span>
           <Link
             href="/buyer/rfqs/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 text-sm font-semibold shadow-sm transition-all duration-150 ease-out active:scale-[0.98]"
+            className="group inline-flex items-center gap-1.5 rounded-lg bg-signal px-3.5 py-1.5 text-sm font-semibold text-ink-950 transition-all hover:bg-signal-bright active:scale-[0.98]"
           >
-            <span>Create RFQ</span>
-            <ArrowUpRight className="h-4 w-4 text-zinc-950" />
+            Create RFQ
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
       </div>
