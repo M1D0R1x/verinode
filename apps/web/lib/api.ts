@@ -457,7 +457,59 @@ export const api = {
     });
     return handleResponse<HedgeQuote>(res);
   },
+
+  // Auth & RBAC
+  async login(email: string, password: string): Promise<AuthSession> {
+    const res = await fetch(`${API_BASE}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+    return handleResponse<AuthSession>(res);
+  },
+
+  async register(company_name: string, email: string, password: string): Promise<AuthSession> {
+    const res = await fetch(`${API_BASE}/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ company_name, email, password }),
+    });
+    return handleResponse<AuthSession>(res);
+  },
+
+  async me(token?: string): Promise<AuthUser> {
+    const res = await fetch(`${API_BASE}/v1/auth/me`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      cache: "no-store",
+    });
+    return handleResponse<AuthUser>(res);
+  },
+
+  async demoCredentials(): Promise<{ credentials: { role: string; email: string; password: string }[] }> {
+    const res = await fetch(`${API_BASE}/v1/auth/demo-credentials`, { cache: "no-store" });
+    return handleResponse<{ credentials: { role: string; email: string; password: string }[] }>(res);
+  },
 };
+
+export type AuthRole = "super_admin" | "admin" | "company_admin" | "trader" | "viewer";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: AuthRole;
+  company_id?: string;
+  company_name?: string;
+  is_platform_staff: boolean;
+  can_write_trading?: boolean;
+}
+
+export interface AuthSession {
+  token: string;
+  user: AuthUser;
+}
 
 export interface ChainStatus {
   modes: { solana: string; arbitrum: string; hyperliquid: string };
