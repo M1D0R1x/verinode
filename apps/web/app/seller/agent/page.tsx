@@ -1,95 +1,98 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowLeft, Terminal, ShieldCheck, CheckCircle2, Copy } from "lucide-react";
+import { ArrowLeft, Terminal, ShieldCheck } from "lucide-react";
+import { RequireAuth } from "@/components/require-auth";
+
+const steps = [
+  {
+    n: "1",
+    title: "Install the telemetry agent",
+    body: "Runs as a systemd daemon on Linux (Ubuntu 22.04+ / Rocky 9, NVIDIA driver ≥ 535.129.03).",
+    code: "curl -fsSL https://get.verinode.io/agent/install.sh | sudo bash",
+  },
+  {
+    n: "2",
+    title: "Generate the host ed25519 signing key",
+    body: "Each node holds a unique keypair in a hardware-backed enclave or protected key directory. Its public key is bound to your supplier identity at registration.",
+    code: "sudo verinode-agent keygen --out /etc/verinode/agent.key",
+  },
+  {
+    n: "3",
+    title: "Run the synthetic canary benchmark",
+    body: "A standardized NCCL all-reduce proves the NVLink interconnect clears the grade floor (≥ 400.0 GB/s) before the block can go live.",
+    code: "sudo verinode-agent canary --grade H100-SXM-8XNV",
+    output: [
+      { ok: true, text: "NCCL all-reduce: 428.4 GB/s  (floor 400.0 GB/s) PASS" },
+      { ok: true, text: "NVLink NVSwitch mesh: 900 GB/s PASS" },
+      { ok: true, text: "ECC unrecovered errors: 0 PASS" },
+    ],
+  },
+  {
+    n: "4",
+    title: "Enable the heartbeat service",
+    body: "The agent then emits signed hardware attestations on a heartbeat so the platform can verify liveness through the delivery window.",
+    code: "sudo systemctl enable --now verinode-agent",
+  },
+];
 
 export default function AgentSetupPage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      <Link
-        href="/seller"
-        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        <span>Back to Supplier Console</span>
-      </Link>
+    <RequireAuth>
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        <Link href="/seller" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-parchment">
+          <ArrowLeft className="h-4 w-4" /> Back to supplier console
+        </Link>
 
-      <div className="border-b border-border pb-4">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-5 w-5 text-accent" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Host Telemetry Agent Installation</h1>
-        </div>
-        <p className="text-xs text-muted mt-1">
-          Install the Verinode Host Agent on your delivery node to produce cryptographically signed hardware attestations and canary proofs.
-        </p>
-      </div>
-
-      <div className="p-4 rounded-xl bg-blue-950/30 border border-blue-900/50 flex items-start gap-3 text-xs text-blue-200">
-        <ShieldCheck className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
-        <div>
-          <strong className="block font-semibold">Invariant 4: Zero Workload Ingestion Guarantee</strong>
-          <p className="text-blue-300/90 mt-0.5 leading-relaxed">
-            The telemetry agent strictly samples host-level NVML/DCGM hardware metrics (PCI IDs, thermals, NVLink mesh health) and synthetic NCCL benchmarks. It never inspects file systems, memory buffers, model weights, or tenant workloads.
+        <div className="mt-6 border-b border-line pb-6">
+          <div className="flex items-center gap-2">
+            <Terminal className="h-5 w-5 text-signal" />
+            <p className="eyebrow">Supplier onboarding</p>
+          </div>
+          <h1 className="mt-2 font-serif text-headline text-parchment">Host telemetry agent</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            The agent is what makes a reservation <em>verifiable</em>: it runs on your delivery node
+            and produces cryptographically signed hardware attestations and canary proofs that the
+            platform checks against the contracted grade before delivery is certified.
           </p>
         </div>
-      </div>
 
-      <div className="space-y-6">
-        {/* Step 1 */}
-        <div className="p-6 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 font-bold text-sm text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-mono">1</span>
-            <span>Download & Install Telemetry Agent Binary</span>
-          </div>
-          <p className="text-xs text-muted">
-            The agent runs as a standalone daemon or systemd service on Linux (Ubuntu 22.04+ / Rocky 9 with NVIDIA Driver $\ge$ 535.129.03).
-          </p>
-          <div className="p-3.5 rounded-lg bg-background border border-border font-mono text-xs text-zinc-300 relative">
-            <code>curl -fsSL https://get.verinode.io/agent/install.sh | sudo bash</code>
+        <div className="mt-6 flex items-start gap-3 rounded-card border border-verify/30 bg-verify-wash/50 p-4">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-verify" />
+          <div>
+            <div className="text-sm font-medium text-parchment">Invariant 4 — zero workload ingestion</div>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              The agent samples only host-level NVML/DCGM metrics (PCI IDs, thermals, NVLink mesh
+              health) and synthetic NCCL benchmarks. It never inspects filesystems, memory, model
+              weights, or tenant workloads.
+            </p>
           </div>
         </div>
 
-        {/* Step 2 */}
-        <div className="p-6 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 font-bold text-sm text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-mono">2</span>
-            <span>Generate Host ed25519 Signing Key</span>
-          </div>
-          <p className="text-xs text-muted">
-            Each physical node generates a unique ed25519 keypair stored in a hardware-backed enclave or protected key directory.
-          </p>
-          <div className="p-3.5 rounded-lg bg-background border border-border font-mono text-xs text-zinc-300">
-            <code>sudo verinode-agent keygen --out /etc/verinode/agent.key</code>
-          </div>
-        </div>
-
-        {/* Step 3 */}
-        <div className="p-6 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 font-bold text-sm text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-mono">3</span>
-            <span>Execute Synthetic Benchmark Canary Test</span>
-          </div>
-          <p className="text-xs text-muted">
-            Execute the standardized NCCL all-reduce synthetic benchmark to prove the NVLink interconnect satisfies the benchmark floor ($\ge$ 400.0 GB/s).
-          </p>
-          <div className="p-3.5 rounded-lg bg-background border border-border font-mono text-xs text-zinc-300 space-y-1">
-            <div className="text-zinc-500"># Run NCCL all-reduce canary benchmark across all 8 SXM GPUs</div>
-            <div><code>sudo verinode-agent canary --grade H100-SXM-8XNV</code></div>
-            <div className="text-emerald-400 mt-2">✓ NCCL All-Reduce Bandwidth: 428.4 GB/s (Floor: 400.0 GB/s PASS)</div>
-            <div className="text-emerald-400">✓ NVLink NVSwitch Mesh: 900 GB/s PASS</div>
-            <div className="text-emerald-400">✓ ECC Memory Errors: 0 Clean PASS</div>
-          </div>
-        </div>
-
-        {/* Step 4 */}
-        <div className="p-6 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 font-bold text-sm text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-mono">4</span>
-            <span>Start Background Telemetry Heartbeat</span>
-          </div>
-          <div className="p-3.5 rounded-lg bg-background border border-border font-mono text-xs text-zinc-300">
-            <code>sudo systemctl enable --now verinode-agent</code>
-          </div>
+        <div className="mt-8 space-y-4">
+          {steps.map((s) => (
+            <div key={s.n} className="card p-6">
+              <div className="flex items-center gap-3">
+                <span className="tabular flex h-7 w-7 items-center justify-center rounded-full bg-signal/15 text-sm font-semibold text-signal">
+                  {s.n}
+                </span>
+                <h3 className="font-serif text-title text-parchment">{s.title}</h3>
+              </div>
+              <p className="mt-2 text-sm text-muted">{s.body}</p>
+              <div className="tabular mt-3 rounded-lg border border-line bg-ink-950 p-3.5 text-xs text-parchment">
+                <code>{s.code}</code>
+                {s.output && (
+                  <div className="mt-3 space-y-1">
+                    {s.output.map((o) => (
+                      <div key={o.text} className="text-verify">✓ {o.text}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </RequireAuth>
   );
 }

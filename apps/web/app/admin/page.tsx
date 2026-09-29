@@ -1,275 +1,119 @@
+"use client";
+
 import Link from "next/link";
-import { ShieldAlert, Users, FileText, Activity, ArrowRight, CheckCircle2, AlertTriangle, Layers, Sliders } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ShieldAlert, Users, Activity, ScrollText, ArrowRight, Radar } from "lucide-react";
 import { api, Participant, SurveillanceFlag } from "@/lib/api";
 import { Contract, Claim, ContractEvent } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 
-export const dynamic = "force-dynamic";
+export default function AdminDashboardPage() {
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [audit, setAudit] = useState<ContractEvent[]>([]);
+  const [flags, setFlags] = useState<SurveillanceFlag[]>([]);
 
-export default async function AdminDashboardPage() {
-  let participants: Participant[] = [];
-  let contracts: Contract[] = [];
-  let claims: Claim[] = [];
-  let auditEvents: ContractEvent[] = [];
-  let flags: SurveillanceFlag[] = [];
-
-  try {
-    participants = await api.listParticipants();
-  } catch {
-    // fallback if unseeded
-  }
-
-  try {
-    contracts = await api.listContracts();
-  } catch {
-    // fallback
-  }
-
-  try {
-    claims = await api.listClaims();
-  } catch {
-    // fallback
-  }
-
-  try {
-    auditEvents = await api.listAdminAudit(50);
-  } catch {
-    // fallback
-  }
-
-  try {
-    flags = await api.listSurveillanceFlags();
-  } catch {
-    // fallback
-  }
+  useEffect(() => {
+    api.listParticipants().then(setParticipants).catch(() => {});
+    api.listContracts().then(setContracts).catch(() => {});
+    api.listClaims().then(setClaims).catch(() => {});
+    api.listAdminAudit(50).then(setAudit).catch(() => {});
+    api.listSurveillanceFlags().then(setFlags).catch(() => {});
+  }, []);
 
   const pendingKYC = participants.filter((p) => !p.kyc_status || p.kyc_status === "pending" || p.kyc_status === "review");
   const openClaims = claims.filter((c) => c.state === "claim_open");
   const liveContracts = contracts.filter((c) => c.state === "live" || c.state === "delivery_test");
   const pendingFlags = flags.filter((f) => f.status === "pending");
 
+  const kpis = [
+    { label: "Pending KYC", value: pendingKYC.length, icon: Users, hint: pendingKYC.length ? "Requires compliance sign-off" : "All approved" },
+    { label: "Open SLA claims", value: openClaims.length, icon: ShieldAlert, hint: openClaims.length ? "Under dispute review" : "No active claims" },
+    { label: "Active allocations", value: liveContracts.length, icon: Activity, hint: `${contracts.length} total contracts` },
+    { label: "Audit events", value: audit.length, icon: ScrollText, hint: "Cryptographically sealed" },
+  ];
+
+  const desks = [
+    { href: "/admin/participants", icon: Users, title: "Participant approval", body: "Review legal entities, sanctions results, and set bilateral credit limits.", cta: `Review ${pendingKYC.length} pending` },
+    { href: "/admin/claims", icon: ShieldAlert, title: "SLA claims review", body: "Inspect canary breaches and resolve or escalate delivery disputes.", cta: `Manage ${openClaims.length} claims` },
+    { href: "/admin/surveillance", icon: Radar, title: "Surveillance", body: "Wash-trade, related-party and concentration review before index inclusion.", cta: `Review ${pendingFlags.length} alerts` },
+    { href: "/admin/audit", icon: ScrollText, title: "Immutable audit", body: "Contract transitions, actor decisions, idempotency keys, evidence digests.", cta: "Inspect stream" },
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="border-b border-border/80 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.label} className="card p-5">
+            <div className="flex items-center justify-between">
+              <span className="eyebrow">{k.label}</span>
+              <k.icon className="h-4 w-4 text-signal" />
+            </div>
+            <div className="tabular mt-2 text-3xl font-semibold text-parchment">{k.value}</div>
+            <p className="mt-1 text-xs text-muted-soft">{k.hint}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {desks.map((d) => (
+          <Link key={d.href} href={d.href} className="group flex flex-col justify-between card p-6 transition-colors hover:border-signal/40">
+            <div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-ink-850 text-signal">
+                <d.icon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-4 font-serif text-title text-parchment">{d.title}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted">{d.body}</p>
+            </div>
+            <div className="mt-5 inline-flex items-center gap-1 text-xs font-medium text-signal">
+              {d.cta} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-xs font-mono text-primary mb-2">
-              <span>INSTITUTIONAL CLEARING & COMPLIANCE DESK</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Operations & Risk Control
-            </h1>
-            <p className="text-sm text-muted mt-1">
-              Bilateral counterparty onboarding, telemetry claims dispute desk, and immutable audit logs.
-            </p>
+            <h2 className="font-serif text-title text-parchment">Forward contracts</h2>
+            <p className="text-xs text-muted-soft">All reservations keyed to the canonical trade_id.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-accent animate-pulse" />
-            <span className="text-xs font-mono text-muted">Core Engine Online</span>
-          </div>
+          <span className="tabular rounded-pill border border-line px-2.5 py-1 text-xs text-muted">{contracts.length} records</span>
         </div>
-      </div>
-
-      {/* KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-xl border border-border bg-surface/50 space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-mono uppercase">Pending KYC</span>
-            <Users className="h-4 w-4 text-warning" />
-          </div>
-          <div className="text-3xl font-bold font-mono text-white">{pendingKYC.length}</div>
-          <p className="text-xs text-muted">
-            {pendingKYC.length > 0 ? "Requires compliance sign-off" : "All participants approved"}
-          </p>
-        </div>
-
-        <div className="p-5 rounded-xl border border-border bg-surface/50 space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-mono uppercase">Open SLA Claims</span>
-            <ShieldAlert className="h-4 w-4 text-danger" />
-          </div>
-          <div className="text-3xl font-bold font-mono text-white">{openClaims.length}</div>
-          <p className="text-xs text-muted">
-            {openClaims.length > 0 ? "Under telemetry dispute review" : "No active delivery claims"}
-          </p>
-        </div>
-
-        <div className="p-5 rounded-xl border border-border bg-surface/50 space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-mono uppercase">Active Allocations</span>
-            <Activity className="h-4 w-4 text-accent" />
-          </div>
-          <div className="text-3xl font-bold font-mono text-white">{liveContracts.length}</div>
-          <p className="text-xs text-muted">
-            {contracts.length} total executed forward contracts
-          </p>
-        </div>
-
-        <div className="p-5 rounded-xl border border-border bg-surface/50 space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-mono uppercase">Audit Log Events</span>
-            <FileText className="h-4 w-4 text-primary" />
-          </div>
-          <div className="text-3xl font-bold font-mono text-white">{auditEvents.length}</div>
-          <p className="text-xs text-muted">
-            Cryptographically sealed events
-          </p>
-        </div>
-      </div>
-
-      {/* Main Action Desks */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link
-          href="/admin/participants"
-          className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
-        >
-          <div className="space-y-3">
-            <div className="h-10 w-10 rounded-lg bg-warning/10 border border-warning/30 flex items-center justify-center text-warning">
-              <Users className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
-                Participant Approval Desk
-              </h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Review legal entities, jurisdictions, sanctions screening results, and assign bilateral institutional credit limits.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex items-center text-xs font-medium text-primary gap-1">
-            <span>Review {pendingKYC.length} Pending</span>
-            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/claims"
-          className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
-        >
-          <div className="space-y-3">
-            <div className="h-10 w-10 rounded-lg bg-danger/10 border border-danger/30 flex items-center justify-center text-danger">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
-                SLA Claims Review Desk
-              </h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Inspect canary test breaches, NCCL bandwidth shortfalls, and resolve or escalate delivery disputes under Master Legal Confirmations.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex items-center text-xs font-medium text-danger gap-1">
-            <span>Manage {openClaims.length} Claims</span>
-            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/surveillance"
-          className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
-        >
-          <div className="space-y-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Sliders className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
-                Surveillance & Anti-Wash Desk
-              </h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Anti-manipulation wash trade filters, concentration ceiling guards, and IOSCO benchmark review queues.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex items-center text-xs font-medium text-amber-400 gap-1">
-            <span>Review {pendingFlags.length} Alerts</span>
-            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/audit"
-          className="group p-6 rounded-xl border border-border bg-surface/40 hover:bg-surface hover:border-primary/50 transition-all flex flex-col justify-between"
-        >
-          <div className="space-y-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
-                Immutable Audit Trail
-              </h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Query contract transition events, actor authorization decisions, idempotency keys, and SHA-256 evidence digests.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex items-center text-xs font-medium text-primary gap-1">
-            <span>Inspect Audit Stream</span>
-            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </Link>
-      </div>
-
-      {/* Recent Forward Contracts Table */}
-      <div className="rounded-xl border border-border bg-surface/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-border/80 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-white">Institutional Forward Contracts</h2>
-            <p className="text-xs text-muted">All physical capacity reservations keyed to canonical trade_id.</p>
-          </div>
-          <Badge variant="outline" className="font-mono text-xs">
-            {contracts.length} Records
-          </Badge>
-        </div>
-
         {contracts.length === 0 ? (
-          <div className="p-8 text-center text-muted text-sm font-mono">
-            No contracts spawned yet. Counterparties can initiate an RFQ via the Buyer Portal.
+          <div className="p-10 text-center text-sm text-muted-soft">
+            No contracts yet. Counterparties initiate an RFQ from the buyer portal.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-surface/60 border-b border-border text-muted font-mono uppercase">
+              <thead className="border-b border-line bg-ink-900/60 text-muted-soft">
                 <tr>
-                  <th className="px-6 py-3">Canonical Trade ID</th>
-                  <th className="px-6 py-3">Grade</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Buyer / Seller</th>
-                  <th className="px-6 py-3">Executed At</th>
-                  <th className="px-6 py-3 text-right">Confirmation</th>
+                  {["Trade ID", "Grade", "Status", "Buyer / Seller", "Executed", ""].map((h) => (
+                    <th key={h} className="px-6 py-3 font-medium uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60">
+              <tbody className="divide-y divide-lineSoft">
                 {contracts.slice(0, 10).map((c) => (
-                  <tr key={c.id} className="hover:bg-surface/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-medium text-white">
-                      <Link href={`/buyer/contracts/${c.id}`} className="hover:text-primary transition-colors">
-                        {c.id}
-                      </Link>
+                  <tr key={c.id} className="transition-colors hover:bg-ink-850/60">
+                    <td className="tabular px-6 py-4 text-parchment">
+                      <Link href={`/buyer/contracts/${c.id}`} className="hover:text-signal">{c.id.slice(0, 18)}…</Link>
                     </td>
-                    <td className="px-6 py-4 font-mono text-muted">{c.grade_id}</td>
+                    <td className="tabular px-6 py-4 text-muted">{c.grade_id}</td>
                     <td className="px-6 py-4">
-                      <Badge variant="default" className="capitalize">
-                        {c.state.replace("_", " ")}
-                      </Badge>
+                      <span className="rounded-pill border border-line px-2 py-0.5 text-xs capitalize text-parchment">
+                        {c.state.replace(/_/g, " ")}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-muted">
-                      <div>B: {c.buyer_id.slice(0, 8)}...</div>
-                      <div>S: {c.seller_id.slice(0, 8)}...</div>
+                    <td className="tabular px-6 py-4 text-muted-soft">
+                      <div>B {c.buyer_id.slice(0, 8)}…</div>
+                      <div>S {c.seller_id.slice(0, 8)}…</div>
                     </td>
-                    <td className="px-6 py-4 text-muted">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
+                    <td className="px-6 py-4 text-muted-soft">{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/buyer/contracts/${c.id}`}
-                        className="inline-flex items-center gap-1 text-primary hover:text-primary-hover font-medium"
-                      >
-                        <span>Inspect</span>
-                        <ArrowRight className="h-3 w-3" />
+                      <Link href={`/buyer/contracts/${c.id}`} className="inline-flex items-center gap-1 text-signal hover:text-signal-bright">
+                        Inspect <ArrowRight className="h-3 w-3" />
                       </Link>
                     </td>
                   </tr>

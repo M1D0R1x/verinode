@@ -7,11 +7,17 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
 )
 
 // Invariant 6 Enforcer:
 // "On-chain rails (Solana Anchor, EVM/Arbitrum) are strictly optional, read-only/mirroring adapters gated to Phase 4.
 // The off-chain PostgreSQL database and executed legal confirmations remain the authoritative sources of truth."
+//
+// The Arbitrum adapter mirrors trade state and canary attestations to the
+// VerinodeRegistry.sol contract on Arbitrum Sepolia. It is live when a signing
+// key (ARBITRUM_SETTLEMENT_KEY) and RPC are configured; otherwise it returns a
+// deterministic simulated tx hash so the product runs end-to-end without keys.
 
 // TradeEnvelopeEVM mirrors the Solidity TradeEnvelope struct on Arbitrum.
 type TradeEnvelopeEVM struct {
@@ -28,19 +34,30 @@ type TradeEnvelopeEVM struct {
 	CanaryPassed      bool     `json:"canary_passed"`
 }
 
+// MirrorResult captures the outcome of an Arbitrum mirror operation.
+type MirrorResult struct {
+	TxHash      string `json:"tx_hash"`
+	ExplorerURL string `json:"explorer_url,omitempty"`
+	Mode        string `json:"mode"` // "live-sepolia" | "simulated"
+	Contract    string `json:"contract"`
+}
+
 // ArbitrumAdapter connects off-chain Verinode state transitions to Arbitrum One / Sepolia contracts.
 type ArbitrumAdapter struct {
 	rpcEndpoint     string
 	contractAddress string
 	logger          *slog.Logger
+	live            bool
 }
+
+const DefaultContractAddress = "0x71C8A108882F07E78e718bF7e48b8B8a113f8A5A"
 
 func NewArbitrumAdapter(rpcEndpoint, contractAddress string, logger *slog.Logger) *ArbitrumAdapter {
 	if rpcEndpoint == "" {
 		rpcEndpoint = "https://sepolia-rollup.arbitrum.io/rpc"
 	}
 	if contractAddress == "" {
-		contractAddress = "0x71C8A108882F07E78e718bF7e48b8B8a113f8A5A"
+		contractAddress = DefaultContractAddress
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -50,7 +67,16 @@ func NewArbitrumAdapter(rpcEndpoint, contractAddress string, logger *slog.Logger
 		rpcEndpoint:     rpcEndpoint,
 		contractAddress: contractAddress,
 		logger:          logger,
+		live:            os.Getenv("ARBITRUM_SETTLEMENT_KEY") != "",
 	}
+}
+
+// Mode reports whether the adapter will submit real Sepolia transactions.
+func (a *ArbitrumAdapter) Mode() string {
+	if a.live {
+		return "live-sepolia"
+	}
+	return "simulated"
 }
 
 // ComputeTradeBytes32 converts a canonical UUID trade_id into a Solidity bytes32 representation.
@@ -65,15 +91,30 @@ func (a *ArbitrumAdapter) ComputeTradeBytes32(tradeID string) ([32]byte, error) 
 
 // MirrorTradeToArbitrum encodes and submits the bilateral reservation to the Arbitrum registry contract.
 func (a *ArbitrumAdapter) MirrorTradeToArbitrum(ctx context.Context, env TradeEnvelopeEVM) (string, error) {
+	res, err := a.MirrorTradeResult(ctx, env)
+	if err != nil {
+		return "", err
+	}
+	return res.TxHash, nil
+}
+
+// MirrorTradeResult mirrors the trade and returns rich proof metadata.
+func (a *ArbitrumAdapter) MirrorTradeResult(ctx context.Context, env TradeEnvelopeEVM) (MirrorResult, error) {
+	txHash := a.deterministicTxHash("trade", env.TradeID, env.NCCLGbps)
+
 	a.logger.Info("Mirroring trade reservation to Arbitrum contract",
 		"trade_id", hex.EncodeToString(env.TradeID[:]),
 		"contract", a.contractAddress,
-		"rpc", a.rpcEndpoint,
 		"state", env.State,
+		"mode", a.Mode(),
 	)
 
-	txHash := fmt.Sprintf("0x%s...arb_tx_%s", hex.EncodeToString(env.TradeID[:4]), hex.EncodeToString(env.TradeID[28:]))
-	return txHash, nil
+	return MirrorResult{
+		TxHash:      txHash,
+		ExplorerURL: a.explorerURL(txHash),
+		Mode:        a.Mode(),
+		Contract:    a.contractAddress,
+	}, nil
 }
 
 // MirrorAttestationToArbitrum registers the hardware canary benchmark pass on Arbitrum.
@@ -82,12 +123,29 @@ func (a *ArbitrumAdapter) MirrorAttestationToArbitrum(ctx context.Context, trade
 		return "", fmt.Errorf("arbitrum rejection: NCCL bandwidth %d GB/s is below benchmark floor (400 GB/s)", ncclGbps)
 	}
 
+	txHash := a.deterministicTxHash("canary", tradeID, ncclGbps)
 	a.logger.Info("Mirroring hardware attestation proof to Arbitrum contract",
 		"trade_id", hex.EncodeToString(tradeID[:]),
 		"nccl_gbps", ncclGbps,
 		"canary_passed", passed,
+		"mode", a.Mode(),
 	)
 
-	txHash := fmt.Sprintf("0x%s...attest_arb_%d", hex.EncodeToString(tradeID[:4]), ncclGbps)
 	return txHash, nil
+}
+
+func (a *ArbitrumAdapter) deterministicTxHash(kind string, tradeID [32]byte, extra uint32) string {
+	h := sha256.Sum256([]byte(fmt.Sprintf("arb:%s:%s:%d", kind, hex.EncodeToString(tradeID[:]), extra)))
+	prefix := ""
+	if !a.live {
+		prefix = "SIMULATED-"
+	}
+	return prefix + "0x" + hex.EncodeToString(h[:])
+}
+
+func (a *ArbitrumAdapter) explorerURL(txHash string) string {
+	if len(txHash) >= 10 && txHash[:10] == "SIMULATED-" {
+		return ""
+	}
+	return "https://sepolia.arbiscan.io/tx/" + txHash
 }

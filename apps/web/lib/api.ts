@@ -2,6 +2,16 @@ import { Claim, ConfirmationDocument, Contract, ContractEvent, ContractState, De
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// Bearer token attached to every request when present (set by the auth layer).
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const h: Record<string, string> = { ...(extra || {}) };
+  if (typeof window !== "undefined") {
+    const t = window.localStorage.getItem("vn_token");
+    if (t) h["Authorization"] = `Bearer ${t}`;
+  }
+  return h;
+}
+
 export interface GatewayHealth {
   status: string;
   service: string;
@@ -136,20 +146,28 @@ export class VerinodeApiError extends Error {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let errorJson: { title?: string; detail?: string } = {};
+  // Read the body once as text so we can tolerate empty (204) and non-JSON payloads
+  // without throwing "Unexpected end of JSON input".
+  const raw = await res.text();
+  let parsed: unknown = undefined;
+  if (raw) {
     try {
-      errorJson = await res.json();
+      parsed = JSON.parse(raw);
     } catch {
-      // ignore
+      parsed = undefined; // non-JSON body (e.g. a proxy error page)
     }
+  }
+
+  if (!res.ok) {
+    const err = (parsed ?? {}) as { title?: string; detail?: string };
     throw new VerinodeApiError(
       res.status,
-      errorJson.title || res.statusText,
-      errorJson.detail || "An unexpected error occurred contacting API gateway"
+      err.title || res.statusText || "Request failed",
+      err.detail || raw || "An unexpected error occurred contacting the API gateway"
     );
   }
-  return res.json() as Promise<T>;
+
+  return (parsed ?? ({} as T)) as T;
 }
 
 export const api = {
@@ -175,7 +193,7 @@ export const api = {
   },
 
   async listParticipants(): Promise<Participant[]> {
-    const res = await fetch(`${API_BASE}/v1/participants`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/participants`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Participant[]>(res);
   },
 
@@ -183,7 +201,7 @@ export const api = {
   async createInventoryBlock(b: InventoryBlock): Promise<InventoryBlock> {
     const res = await fetch(`${API_BASE}/v1/inventory/blocks`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(b),
     });
     return handleResponse<InventoryBlock>(res);
@@ -210,7 +228,7 @@ export const api = {
   }): Promise<RFQ> {
     const res = await fetch(`${API_BASE}/v1/rfqs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(req),
     });
     return handleResponse<RFQ>(res);
@@ -234,7 +252,7 @@ export const api = {
   ): Promise<Quote> {
     const res = await fetch(`${API_BASE}/v1/rfqs/${rfqId}/quotes`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(q),
     });
     return handleResponse<Quote>(res);
@@ -252,7 +270,7 @@ export const api = {
   ): Promise<{ status: string; contract_id: string; contract: Contract }> {
     const res = await fetch(`${API_BASE}/v1/rfqs/${rfqId}/quotes/${quoteId}/accept`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ buyer_id: buyerId }),
     });
     return handleResponse<{ status: string; contract_id: string; contract: Contract }>(res);
@@ -285,7 +303,7 @@ export const api = {
   },
 
   async listContracts(): Promise<Contract[]> {
-    const res = await fetch(`${API_BASE}/v1/contracts`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/contracts`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Contract[]>(res);
   },
 
@@ -301,7 +319,7 @@ export const api = {
 
   // Admin & Compliance
   async listAdminAudit(limit: number = 100): Promise<ContractEvent[]> {
-    const res = await fetch(`${API_BASE}/v1/admin/audit?limit=${limit}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/admin/audit?limit=${limit}`, { cache: "no-store", headers: authHeaders() });
     return handleResponse<ContractEvent[]>(res);
   },
 
@@ -312,7 +330,7 @@ export const api = {
   ): Promise<Participant> {
     const res = await fetch(`${API_BASE}/v1/participants/${id}/kyc`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ kyc_status, credit_limit_cents }),
     });
     return handleResponse<Participant>(res);
@@ -321,7 +339,7 @@ export const api = {
   // SLA Claims
   async listClaims(state?: string): Promise<Claim[]> {
     const url = state ? `${API_BASE}/v1/claims?state=${encodeURIComponent(state)}` : `${API_BASE}/v1/claims`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", headers: authHeaders() });
     return handleResponse<Claim[]>(res);
   },
 
@@ -344,7 +362,7 @@ export const api = {
   ): Promise<{ claim_id: string; state: string; resolved_at: string }> {
     const res = await fetch(`${API_BASE}/v1/claims/${claimId}/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ target_state: targetState }),
     });
     return handleResponse<{ claim_id: string; state: string; resolved_at: string }>(res);
@@ -409,7 +427,7 @@ export const api = {
   // Surveillance Desk
   async listSurveillanceFlags(status?: string): Promise<SurveillanceFlag[]> {
     const query = status ? `?status=${encodeURIComponent(status)}` : "";
-    const res = await fetch(`${API_BASE}/v1/surveillance/flags${query}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/v1/surveillance/flags${query}`, { cache: "no-store", headers: authHeaders() });
     const data = await handleResponse<{ flags: SurveillanceFlag[] }>(res);
     return data.flags || [];
   },
@@ -422,9 +440,128 @@ export const api = {
   ): Promise<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }> {
     const res = await fetch(`${API_BASE}/v1/surveillance/flags/${flagId}/review`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ reviewer, resolution, status }),
     });
     return handleResponse<{ status: string; flag_id: string; reviewed_by: string; resolution: string; new_status: string }>(res);
   },
+
+  // Phase 4: On-chain audit mirrors (Solana / Arbitrum) + Hyperliquid hedge (Invariant 6)
+  async getChainStatus(): Promise<ChainStatus> {
+    const res = await fetch(`${API_BASE}/v1/chain/status`, { cache: "no-store" });
+    return handleResponse<ChainStatus>(res);
+  },
+
+  async mirrorContract(tradeId: string): Promise<ProofBundle> {
+    const res = await fetch(`${API_BASE}/v1/chain/proofs/${tradeId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    return handleResponse<ProofBundle>(res);
+  },
+
+  async hedgeQuote(req: {
+    duration_hours: number;
+    gpu_count: number;
+    fixed_rate_hourly: number;
+    index_mark_price?: number;
+    series_id?: string;
+  }): Promise<HedgeQuote> {
+    const res = await fetch(`${API_BASE}/v1/hedge/quote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+    return handleResponse<HedgeQuote>(res);
+  },
+
+  // Auth & RBAC
+  async login(email: string, password: string): Promise<AuthSession> {
+    const res = await fetch(`${API_BASE}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+    return handleResponse<AuthSession>(res);
+  },
+
+  async register(company_name: string, email: string, password: string): Promise<AuthSession> {
+    const res = await fetch(`${API_BASE}/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ company_name, email, password }),
+    });
+    return handleResponse<AuthSession>(res);
+  },
+
+  async me(token?: string): Promise<AuthUser> {
+    const res = await fetch(`${API_BASE}/v1/auth/me`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      cache: "no-store",
+    });
+    return handleResponse<AuthUser>(res);
+  },
+
+  async demoCredentials(): Promise<{ credentials: { role: string; email: string; password: string }[] }> {
+    const res = await fetch(`${API_BASE}/v1/auth/demo-credentials`, { cache: "no-store" });
+    return handleResponse<{ credentials: { role: string; email: string; password: string }[] }>(res);
+  },
 };
+
+export type AuthRole = "super_admin" | "admin" | "company_admin" | "trader" | "viewer";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: AuthRole;
+  company_id?: string;
+  company_name?: string;
+  is_platform_staff: boolean;
+  can_write_trading?: boolean;
+}
+
+export interface AuthSession {
+  token: string;
+  user: AuthUser;
+}
+
+export interface ChainStatus {
+  modes: { solana: string; arbitrum: string; hyperliquid: string };
+  authority: string;
+  clusters: { solana: string; arbitrum: string; hyperliquid: string };
+  timestamp: string;
+}
+
+export interface RailProof {
+  chain: string;
+  mode: string;
+  state_tx?: string;
+  attestation_tx?: string;
+  explorer_url?: string;
+  reference?: string;
+  error?: string;
+}
+
+export interface ProofBundle {
+  trade_id: string;
+  mirrored_at: string;
+  rails: RailProof[];
+  note: string;
+}
+
+export interface HedgeQuote {
+  total_gpu_hours: number;
+  physical_contract_usd: number;
+  floating_index_usd: number;
+  basis_spread_usd: number;
+  basis_spread_pct: number;
+  annualized_basis_pct: number;
+  recommended_action: string;
+  recommended_size_contracts: number;
+  rationale: string;
+  market: string;
+}

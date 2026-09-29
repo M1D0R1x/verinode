@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/M1D0R1x/verinode/services/internal/auth"
 	"github.com/M1D0R1x/verinode/services/internal/telemetry"
 )
 
@@ -178,22 +180,27 @@ func TestUnconfiguredDatabaseGracefulServiceUnavailable(t *testing.T) {
 	handler := setupTestServer()
 
 	endpoints := []struct {
-		method string
-		path   string
-		body   string
+		method  string
+		path    string
+		body    string
+		needsAuth bool
 	}{
-		{"POST", "/v1/participants", `{"legal_name":"Test LLC"}`},
-		{"GET", "/v1/participants", ""},
-		{"POST", "/v1/inventory/blocks", `{"grade_id":"H100-SXM-8XNV"}`},
-		{"GET", "/v1/inventory/blocks", ""},
-		{"POST", "/v1/rfqs", `{"grade_id":"H100-SXM-8XNV"}`},
-		{"GET", "/v1/rfqs/some-id", ""},
-		{"POST", "/v1/rfqs/some-id/quotes", `{"price_cents":100}`},
-		{"GET", "/v1/rfqs/some-id/quotes", ""},
-		{"POST", "/v1/rfqs/some-id/quotes/q-id/accept", `{"buyer_id":"b-id"}`},
-		{"GET", "/v1/contracts/c-id", ""},
-		{"POST", "/v1/contracts/c-id/advance", `{"next_state":"live"}`},
+		{"POST", "/v1/participants", `{"legal_name":"Test LLC"}`, false},
+		{"GET", "/v1/participants", "", false},
+		{"POST", "/v1/inventory/blocks", `{"grade_id":"H100-SXM-8XNV"}`, true},
+		{"GET", "/v1/inventory/blocks", "", false},
+		{"POST", "/v1/rfqs", `{"grade_id":"H100-SXM-8XNV"}`, true},
+		{"GET", "/v1/rfqs/some-id", "", false},
+		{"POST", "/v1/rfqs/some-id/quotes", `{"price_cents":100}`, true},
+		{"GET", "/v1/rfqs/some-id/quotes", "", false},
+		{"POST", "/v1/rfqs/some-id/quotes/q-id/accept", `{"buyer_id":"b-id"}`, true},
+		{"GET", "/v1/contracts/c-id", "", false},
+		{"POST", "/v1/contracts/c-id/advance", `{"next_state":"live"}`, false},
 	}
+
+	// A valid trader token so trading-write endpoints pass auth and reach the DB check.
+	traderToken, _ := auth.NewTokenService(os.Getenv("AUTH_JWT_SECRET"), time.Hour).
+		Mint("usr_test", "t@co.example", auth.RoleTrader, "co_test")
 
 	for _, ep := range endpoints {
 		ep := ep
@@ -204,6 +211,9 @@ func TestUnconfiguredDatabaseGracefulServiceUnavailable(t *testing.T) {
 				req = httptest.NewRequest(ep.method, ep.path, bytes.NewBufferString(ep.body))
 			} else {
 				req = httptest.NewRequest(ep.method, ep.path, nil)
+			}
+			if ep.needsAuth {
+				req.Header.Set("Authorization", "Bearer "+traderToken)
 			}
 			rec := httptest.NewRecorder()
 

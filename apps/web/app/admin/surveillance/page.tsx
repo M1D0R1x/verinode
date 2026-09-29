@@ -69,11 +69,11 @@ export default function SurveillanceAdminPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272727] pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20242E] pb-6">
         <div className="flex items-center gap-4">
           <Link
             href="/admin"
-            className="p-2 rounded-lg border border-[#272727] bg-[#121212] hover:bg-[#181818] hover:text-white text-zinc-400 transition-colors active:scale-[0.98]"
+            className="p-2 rounded-lg border border-[#20242E] bg-[#101217] hover:bg-[#151821] hover:text-white text-zinc-400 transition-colors active:scale-[0.98]"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -92,7 +92,7 @@ export default function SurveillanceAdminPage() {
           <button
             onClick={() => fetchFlags()}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#272727] bg-[#121212] hover:bg-[#181818] text-zinc-300 transition-colors active:scale-[0.98]"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#20242E] bg-[#101217] hover:bg-[#151821] text-zinc-300 transition-colors active:scale-[0.98]"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh Queue
@@ -101,7 +101,7 @@ export default function SurveillanceAdminPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#272727] pb-3 text-xs font-mono">
+      <div className="flex items-center gap-2 border-b border-[#20242E] pb-3 text-xs font-mono">
         <span className="text-zinc-500 mr-2">FILTER STATUS:</span>
         {["all", "pending", "reviewed", "dismissed", "escalated"].map((st) => (
           <button
@@ -110,7 +110,7 @@ export default function SurveillanceAdminPage() {
             className={`px-2.5 py-1 rounded-md transition-colors ${
               statusFilter === st
                 ? "bg-white text-black font-semibold"
-                : "text-zinc-400 hover:text-white hover:bg-[#181818]"
+                : "text-zinc-400 hover:text-white hover:bg-[#151821]"
             }`}
           >
             {st.toUpperCase()}
@@ -127,11 +127,11 @@ export default function SurveillanceAdminPage() {
       {/* Flags List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="rounded-xl border border-[#272727] bg-[#121212] p-8 text-center text-sm font-mono text-zinc-500">
+          <div className="rounded-xl border border-[#20242E] bg-[#101217] p-8 text-center text-sm font-mono text-zinc-500">
             Scanning market data surveillance audit trail...
           </div>
         ) : flags.length === 0 ? (
-          <div className="rounded-xl border border-[#272727] bg-[#121212] p-12 text-center space-y-3">
+          <div className="rounded-xl border border-[#20242E] bg-[#101217] p-12 text-center space-y-3">
             <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto" />
             <h3 className="text-sm font-bold text-white">No Surveillance Flags Found</h3>
             <p className="text-xs text-zinc-400 max-w-sm mx-auto">
@@ -142,9 +142,9 @@ export default function SurveillanceAdminPage() {
           flags.map((flag) => (
             <div
               key={flag.id}
-              className="rounded-xl border border-[#272727] bg-[#121212] p-5 space-y-4 hover:border-zinc-700 transition-colors"
+              className="rounded-xl border border-[#20242E] bg-[#101217] p-5 space-y-4 hover:border-zinc-700 transition-colors"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272727] pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#20242E] pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400">
                     <ShieldAlert className="h-4 w-4" />
@@ -178,13 +178,13 @@ export default function SurveillanceAdminPage() {
               </div>
 
               {/* Details JSON / Notes */}
-              <div className="rounded-lg border border-[#272727] bg-black p-3 text-xs font-mono space-y-2">
+              <div className="rounded-lg border border-[#20242E] bg-ink-950 p-3 text-xs font-mono space-y-2">
                 <div className="text-zinc-500 uppercase text-[10px]">Surveillance Rule Engine Telemetry:</div>
                 <div className="text-zinc-300 leading-relaxed">
                   {typeof flag.details === "object" ? JSON.stringify(flag.details, null, 2) : String(flag.details)}
                 </div>
                 {flag.resolution && (
-                  <div className="border-t border-[#272727] pt-2 text-emerald-400">
+                  <div className="border-t border-[#20242E] pt-2 text-emerald-400">
                     <strong>Audit Resolution:</strong> {flag.resolution} (by {flag.reviewed_by})
                   </div>
                 )}
@@ -196,7 +196,7 @@ export default function SurveillanceAdminPage() {
                   <button
                     onClick={() => handleReview(flag.id, "dismissed")}
                     disabled={updatingId === flag.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[#272727] bg-[#181818] hover:bg-[#222222] text-zinc-300 transition-colors active:scale-[0.98]"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[#20242E] bg-[#151821] hover:bg-[#222222] text-zinc-300 transition-colors active:scale-[0.98]"
                   >
                     <XCircle className="h-3.5 w-3.5 text-zinc-400" />
                     Dismiss (False Positive)

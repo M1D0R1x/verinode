@@ -1,19 +1,34 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Newsreader, Inter, JetBrains_Mono } from "next/font/google";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const manrope = Manrope({
+const serif = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  display: "swap",
+});
+
+const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
 
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Verinode — Institutional GPU Forward Marketplace & Telemetry Verification",
+  title: "Verinode — Verified GPU Forward Reservations",
   description:
-    "Institutional brokered marketplace for physically delivered, enterprise GPU-capacity reservations with cryptographic host telemetry verification.",
+    "An institutional desk for physically delivered, enterprise GPU-capacity forward reservations — standardized contracts, cryptographic canary verification, and balanced double-entry escrow.",
 };
 
 export default function RootLayout({
@@ -22,11 +37,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${manrope.variable}`}>
-      <body className="min-h-screen bg-background text-foreground antialiased flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+    <html
+      lang="en"
+      className={`dark ${serif.variable} ${sans.variable} ${mono.variable}`}
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-ink-950 text-parchment antialiased flex flex-col font-sans"
+      >
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
